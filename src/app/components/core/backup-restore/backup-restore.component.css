@@ -1,0 +1,27 @@
+.align-content {
+  vertical-align: middle;
+}
+
+.fix-margin {
+  margin-top: 0px !important;
+  margin-right: 2px !important;
+}
+
+.help-pad {
+  margin-right: 0.7rem;
+}
+
+.sort-order {
+  display: inline-block;
+  cursor: pointer !important;
+}
+
+.context-menu {
+  border: none;
+}
+
+@media only screen and (min-width: 768px) {
+  .backup-card-content {
+      overflow: visible;
+  }
+}

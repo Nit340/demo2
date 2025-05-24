@@ -1,0 +1,52 @@
+<div class="container is-fluid">
+  <div class="card">
+    <header class="card-header">
+      <p id="scheduled-process" class="card-header-title">
+        Schedules &nbsp;
+        <button (click)="getSchedules()" class="button is-small" title="Reload" id="refresh-check">
+          <i class="fa fa-sm fa-sync" aria-hidden="true"></i>
+        </button>
+      </p>
+    </header>
+    <div class="card-content">
+      <table class="table scroll is-responsive is-hoverable">
+        <thead id="head">
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Interval</th>
+            <th>Time</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let schedule of scheduleData" [ngClass]="{'fade': !schedule.enabled}" id={{schedule.name}}>
+            <td>
+              {{schedule.name}}
+            </td>
+            <td><small>{{schedule.type}}</small></td>
+            <td>
+              <small *ngIf="schedule.repeat.trim() !== '00:00:00'"> {{schedule.repeat.trim()}}</small>
+            </td>
+            <td>
+              <ng-container *ngIf="schedule.type == 'TIMED'">
+                <small *ngIf="schedule.dayName !== 'None'"> {{schedule.dayName + ', '}} </small>
+                <small>{{ schedule.time }}</small>
+              </ng-container>
+            </td>
+            <td>
+              <a *ngIf="rolesService.hasEditPermissions()" (click)="openEditSchedulePage(schedule.id)"
+                class="button is-text ed-btn" name={{schedule.name}}>
+                <i class="fa fa-xs fa-edit" aria-hidden="true"></i>
+              </a>
+              <a *ngIf="!rolesService.hasEditPermissions()" (click)="openEditSchedulePage(schedule.id)"
+                class="button is-small is-text" name={{schedule.name}}>
+                View
+              </a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

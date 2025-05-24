@@ -1,0 +1,8 @@
+<footer [ngClass]="{'git-hash':router.url.includes('/setting')}" class="footer">
+  <div class="content has-text-centered has-text-grey-dark">
+    <div class="help" *ngIf="router.url.includes('/setting')">{{appVersion}}</div>
+    <small>
+      &copy; {{copyrightYear}} DIANOMIC SYSTEMS INC. All Rights Reserved.
+    </small>
+  </div>
+</footer>

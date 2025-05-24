@@ -1,0 +1,11 @@
+.modal-content {
+    width: 80%;
+}
+
+pre {
+    margin: 14px;
+}
+
+.modal {
+    z-index: 100;
+}

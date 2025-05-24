@@ -1,0 +1,32 @@
+#repeat_day{
+    float: left;
+    width: 18%;
+}
+
+#repeat_time{
+    width: 81%;
+    margin-left: 1%;
+}
+
+.modal-card { overflow: visible;}
+.modal-card-body { overflow: visible; }
+
+@media screen and (min-width: 769px) {
+  .modal-card {
+    width: 50%;
+  }
+}
+
+:host ::ng-deep .ng-select .ng-select-container {
+  font-size: 0.8em;
+  min-height: 0px;
+}
+
+:host ::ng-deep .ng-select.ng-select-single .ng-select-container {
+  height: 2.3em;
+  font-size: 0.8em;
+}
+
+:host ::ng-deep .ng-select.ng-select-single .ng-dropdown-panel .ng-dropdown-panel-items  {
+    font-size: 0.8em !important;
+}

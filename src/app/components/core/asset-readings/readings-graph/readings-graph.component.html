@@ -1,0 +1,261 @@
+<div id="chart_modal" class="modal">
+  <div class="modal-background"></div>
+  <div class="modal-card animated fadeIn" [ngClass]="{overflow: timeDropDownOpened}">
+    <header class="modal-card-head">
+      <span class="modal-card-title is-size-5">
+        <div class="asset-name">
+          <span class="asset-code">
+            {{assetCode}}
+          </span>
+          <button *ngIf="!isAlive" (click)="refresh()" title="Reload" class="button small-btn" id="refresh-check">
+            <i class="fa fa-sm fa-sync" aria-hidden="true"></i>
+          </button>
+        </div>
+        <ng-container
+          *ngIf="!isLatestReadings && !(selectedTab == 4) && !(selectedTab == 5) && infoTextTimestamps.start">
+          <span class="help" *ngIf="isAlive">
+            *Showing data from {{infoTextTimestamps.start}} to current time
+          </span>
+          <span class="help" *ngIf="!isAlive">
+            *Showing data from {{infoTextTimestamps.start}} to {{infoTextTimestamps.end}}
+          </span>
+        </ng-container>
+      </span>
+      <ng-container *ngIf="!isLatestReadings && !(selectedTab == 5)">
+        <ng-container *ngIf="!isReadingsFetched">
+          <button class="button small-btn is-loading spin-button"></button>
+        </ng-container>
+        <ng-container *ngIf="!fromMostRecent && !(selectedTab == 4)">
+          <button (click)="showGraphFromMostRecentReading()" class="button small-btn playback-button btn-enabled"
+            title="Show graph from most recent reading">
+            <i class="fa fa-sm fa-bolt" aria-hidden="true"></i>
+          </button>
+        </ng-container>
+        <ng-container *ngIf="fromMostRecent && !(selectedTab == 4)">
+          <button (click)="showGraphFromCurrentTime()" class="button small-btn playback-button btn-enabled"
+            title="Show graph from current time">
+            <i class="far fa-clock" aria-hidden="true"></i>
+          </button>
+        </ng-container>
+        <button [disabled]="isAlive" (click)="moveInReadingsGraph('back')" class="button small-btn playback-button"
+          [ngClass]="{'btn-enabled': !isAlive}" title="Move backward">
+          <i class="fa fa-sm fa-backward" aria-hidden="true"></i>
+        </button>
+        <ng-container *ngIf="isAlive">
+          <button (click)="toggleAutoRefresh(false)" class="button small-btn playback-button btn-enabled"
+            title="Pause graph">
+            <i class="fa fa-sm fa-pause" aria-hidden="true"></i>
+          </button>
+        </ng-container>
+        <ng-container *ngIf="!isAlive">
+          <button [disabled]="graphRefreshInterval === -1" (click)="toggleAutoRefresh(true)"
+            class="button small-btn playback-button" [ngClass]="{'btn-enabled': !(graphRefreshInterval === -1)}"
+            title="Play graph">
+            <i class="fa fa-sm fa-play" aria-hidden="true"></i>
+          </button>
+        </ng-container>
+        <button [disabled]="isAlive || backwardReadingCounter === 0" (click)="moveInReadingsGraph('forward')"
+          class="button small-btn playback-button"
+          [ngClass]="{'btn-enabled': !(isAlive || backwardReadingCounter === 0)}" title="Move forward">
+          <i class="fa fa-sm fa-forward" aria-hidden="true"></i>
+        </button>
+      </ng-container>
+      <div class="close">
+        <button class="delete" aria-label="close" (click)="toggleModal(false);loadPage = false"></button>
+      </div>
+    </header>
+    <section class="modal-card-body"
+      [ngClass]="{overflow: timeDropDownOpened || numberTypeReadingsList?.length === 0 && arrayTypeReadingsList?.length === 0 && isEmptyObject(stringTypeReadingsList), overflowHide: imageReadings?.length>0 && isLatestReadings}">
+      <ng-container *ngIf="loadPage; else tabs">
+        <div class="app-loading">
+          &nbsp;
+          <svg class="spinner animated fadeIn fadeOut" viewBox="0 0 100 100">
+            <circle class="path" cx="50%" cy="50%" r="10" fill="none" stroke-width="2" stroke-miterlimit="10" />
+          </svg>
+        </div>
+      </ng-container>
+      <ng-template #tabs>
+        <div class="columns" id="time-dropdown-container">
+          <div class="column is-2 time-dropdown" *ngIf="!isLatestReadings">
+            <app-time-dropdown (updateGraphEvent)=getTimeBasedAssetReadingsAndSummary($event)
+              (dropdownOpenEvent)="timeDropDownOpened = $event"></app-time-dropdown>
+          </div>
+          <div class="column"
+            [ngClass]="{'is-7': rangeSliderService.getAlphControlStatus() && selectedTab === 1, 'is-9': !rangeSliderService.getAlphControlStatus() || selectedTab !== 1}"
+            *ngIf="!isLatestReadings && !(selectedTab == 4) && availableAssets.length > 0">
+            <ng-select groupBy="name" placeholder="Select assets" bindLabel="name" [items]="availableAssets"
+              [multiple]="true" [(ngModel)]="additionalAssets" (add)="addOrRemoveAsset($event)"
+              [clearable]="additionalAssets.length > 1" (remove)="addOrRemoveAsset($event.label)"
+              [ngModelOptions]="{standalone: true}" (clear)="clearAdditionalAssets()">
+            </ng-select>
+          </div>
+          <div class="column is-2" *ngIf="rangeSliderService.getAlphControlStatus() && selectedTab === 1">
+            <div class="range-wrap">
+              <app-range-slider></app-range-slider>
+            </div>
+          </div>
+          <div class="column">
+            <button *ngIf="zoomConfig.isZoomed && selectedTab == 1" (click)="resetZoom()" title="Reset zoom"
+              class="button small-btn zoom-button">
+              <i class="bi bi-zoom-out" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+        <div class="columns">
+          <div class="column" *ngIf="!isLatestReadings">
+            <div
+              *ngIf="!(numberTypeReadingsList?.length === 0 && arrayTypeReadingsList?.length === 0 && isEmptyObject(stringTypeReadingsList))"
+              class="tabs is-boxed is-fullwidth is-small" id="tabs">
+              <ul>
+                <li *ngIf="numberTypeReadingsList?.length > 0" [ngClass]="{'is-active': selectedTab == 1}" data-tab="1">
+                  <a (click)="selectTab(1)">
+                    <span><b>Graph</b></span>
+                  </a>
+                </li>
+                <li *ngIf="arrayTypeReadingsList?.length > 0" [ngClass]="{'is-active': selectedTab == 2}" data-tab="2">
+                  <a (click)="selectTab(2)">
+                    <span><b>3D Graph</b></span>
+                  </a>
+                </li>
+                <li *ngIf="stringTypeReadingsList && !isEmptyObject(stringTypeReadingsList)"
+                  [ngClass]="{'is-active': selectedTab == 3}" data-tab="3">
+                  <a (click)="selectTab(3)">
+                    <span><b>Tabular Data</b></span>
+                  </a>
+                </li>
+                <li *ngIf="showSummaryTab()" [ngClass]="{'is-active': selectedTab == 4}" data-tab="4">
+                  <a (click)="selectTab(4)">
+                    <span><b>Summary</b></span>
+                  </a>
+                </li>
+                <li *ngIf="imageReadings.length > 0" [ngClass]="{'is-active': selectedTab == 5}" data-tab="5">
+                  <a (click)="selectTab(5)">
+                    <span><b>Image</b></span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="columns">
+          <div class="column">
+            <div id="tab-content" class="custom-height">
+              <ng-container *ngIf="showSpinner; else DataDiv">
+                <div class="app-loading">
+                  &nbsp;
+                  <svg class="spinner animated fadeIn fadeOut" viewBox="0 0 100 100">
+                    <circle class="path" cx="50%" cy="50%" r="10" fill="none" stroke-width="2" stroke-miterlimit="10" />
+                  </svg>
+                </div>
+              </ng-container>
+              <ng-template #DataDiv>
+                <div *ngIf="numberTypeReadingsList?.length == 0 && arrayTypeReadingsList?.length == 0
+                  && isEmptyObject(stringTypeReadingsList) && imageReadings?.length == 0"
+                  class="custom-height no-reading">
+                  <div class="has-text-centered no-data"><small class="text-secondary has-text-grey-light">
+                      No readings available.</small>
+                  </div>
+                </div>
+                <div *ngIf="selectedTab === 1 && numberTypeReadingsList?.length > 0" class="is-active" data-content="1">
+                  <div>
+                    <app-chart class="chart-container animated fadeIn" [from]="'asset'" [type]="assetChartType"
+                      [data]="assetReadingValues" [options]="assetChartOptions" #assetChart>
+                    </app-chart>
+                  </div>
+                </div>
+                <div *ngIf="selectedTab === 2 && arrayTypeReadingsList?.length > 0" data-content="2">
+                  <div id="3d_graph" #3DGraph></div>
+                </div>
+                <div *ngIf="selectedTab === 3 && !isEmptyObject(stringTypeReadingsList)" data-content="3">
+                  <table class="table is-responsive is-borderless data-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 21%">Timestamp</th>
+                        <th>Reading</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let txtData of stringTypeReadingsList | keyvalue: keyDescOrder">
+                        <td class="pt-4">
+                          <small>{{txtData.key}}</small>
+                        </td>
+                        <td>
+                          <table class="table is-responsive is-borderless">
+                            <tbody>
+                              <ng-container *ngFor="let item of txtData.value">
+                                <tr>
+                                  <td style="padding-left: 0px">{{item.key}}</td>
+                                  <td style="padding-left: 0px">{{item.data}}</td>
+                                </tr>
+                              </ng-container>
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div *ngIf="selectedTab === 4 && assetReadingSummary?.length > 0 && showSummaryTab() " data-content="4">
+                  <app-asset-reading-summary [buttonText]="buttonText" [showSummarySpinner]="showSummarySpinner"
+                    [autoRefresh]="autoRefresh" [assetReadingSummary]="assetReadingSummary"
+                    [summaryLimit]="summaryLimit"></app-asset-reading-summary>
+                </div>
+                <div *ngIf="selectedTab === 5" data-content="5">
+                  <div class="columns margin-top">
+                    <div class="has-text-centered column"
+                      [ngClass]="{'is-12, image-reading-only': isEmptyObject(stringTypeReadingsList), 'is-8, image-with-data': !isEmptyObject(stringTypeReadingsList)}">
+                      <ng-container *ngFor="let read of imageReadings">
+                        <div id="tab-content">
+                          <img [src]="read.image" alt={{read.datapoint}}>
+                        </div>
+                        <small class="has-text-centered text-secondary has-text-grey-dark is-block">Width:
+                          {{imageReadingsDimensions.width}}px, Height:
+                          {{imageReadingsDimensions.height}}px, Depth: {{imageReadingsDimensions.depth}}px
+                        </small>
+                        <small
+                          class="has-text-centered text-secondary has-text-grey-dark is-block margin-bottom">{{read?.datapoint}},
+                          Timestamp:
+                          {{read?.timestamp}}
+                        </small>
+                      </ng-container>
+                    </div>
+                    <div *ngIf="!isEmptyObject(stringTypeReadingsList)" data-content="3"
+                      class="column is-4 image-with-data">
+                      <table class="table is-responsive is-borderless data-table">
+                        <thead>
+                          <tr>
+                            <th style="width: 40%" class="table-heading">Timestamp</th>
+                            <th class="table-heading">Reading</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let txtData of stringTypeReadingsList | keyvalue: keyDescOrder">
+                            <td class="table-data">
+                              <small>{{txtData.key}}</small>
+                            </td>
+                            <td>
+                              <table class="table is-responsive is-borderless">
+                                <tbody>
+                                  <ng-container *ngFor="let item of txtData.value">
+                                    <tr>
+                                      <td class="metadata">{{item.key}}</td>
+                                      <td class="metadata">{{item.data}}</td>
+                                    </tr>
+                                  </ng-container>
+                                </tbody>
+                              </table>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </div>
+          </div>
+        </div>
+      </ng-template>
+    </section>
+  </div>
+</div>

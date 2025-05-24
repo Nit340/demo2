@@ -1,0 +1,281 @@
+<div>
+  <div class="navbar-item pb-0">
+    <div>
+      <nav class="breadcrumb mb-2" aria-label="breadcrumbs">
+        <ul>
+          <li *ngIf="from=='south'">
+            <a *ngIf="source" [routerLink]="['/flow/editor/south']">South</a>
+            <span *ngIf="!source" id="south-service">South</span>
+          </li>
+          <li *ngIf="from=='north'">
+            <a *ngIf="source" [routerLink]="['/flow/editor/north']">North</a>
+            <span *ngIf="!source">North</span>
+          </li>
+          <li *ngIf="from=='notifications'">
+            <span>Notifications</span>
+          </li>
+          <li [ngClass]="{'is-active' : !source || !isAddFilterWizard}" *ngIf="source">
+            <a [routerLink]="['/flow/editor', from, source, 'details']">
+              {{source ? source : 'Add'}}
+            </a>
+          </li>
+          <li class="is-active" *ngIf="source  && isAddFilterWizard">
+            <a href="#" aria-current="page">
+              Add Filter
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <div *ngIf="serviceInfo.isEnabled && serviceInfo.isInstalled && from === 'notifications'">
+      <app-service-config (serviceConfigureModal)="openServiceConfigureModal()" [from]="'flow-editor'">
+      </app-service-config>
+      <span
+        class="icon is-small tooltip has-tooltip-left has-tooltip-arrow is-pulled-right is-hovered pb-3 text-btn help-icon"
+        data-tooltip="Help" (click)="goToLink('using-the-notification-service')">
+        <i class="far fa-question-circle"></i>
+      </span>
+    </div>
+    <ng-container
+      *ngIf="source && rolesService.hasEditPermissions() && !isAddFilterWizard && updatedFilterPipeline?.length > 0 && isPipelineUpdated()">
+      <div>
+        <button class="button is-outlined is-small is-link mb-1" (click)="save()">Save</button>
+      </div>
+    </ng-container>
+  </div>
+  <ng-container *ngIf="from === 'notifications'">
+    <app-service-warning [service]="serviceInfo" [serviceType]="'Notification'"
+      (serviceConfigureModal)="openServiceConfigureModal()" (refreshService)="refreshServiceInfo()">
+    </app-service-warning>
+  </ng-container>
+  <div [hidden]="isAddFilterWizard">
+    <app-toolbar *ngIf="source && rolesService.hasEditPermissions()" class="is-inline-block pr-2"
+      (reloadData)="reload()" (resetNodes)="reset()" (undo)="callUndoAction()" (redo)="callRedoAction()"
+      [historyData]="historyData" (delete)="onDeleteAction()" [isDeleteDisabled]="nodesToDelete.length == 0">
+    </app-toolbar>
+    <div class="rete"
+      [ngClass]="{'expanded-width': isSidebarCollapsed, 'collapsed-width': !isSidebarCollapsed, 'custom-margin': source && rolesService.hasEditPermissions()}"
+      #rete>
+    </div>
+    <div class="dock"></div>
+  </div>
+  <ng-contafiner *ngIf="source && isAddFilterWizard">
+    <div class="box animated slideInRight">
+      <app-add-filter-wizard (notify)="onNotify($event)" [serviceName]="source" [from]="from"></app-add-filter-wizard>
+    </div>
+  </ng-contafiner>
+  <!-- Quick View -->
+  <app-quickview [showReadings]="showReadings" [showLogs]="showLogs">
+    <ng-container *ngIf="showPluginConfiguration">
+      <app-configuration-group *ngIf="category" [category]="category" [from]="'south'" [sourceName]="serviceName"
+        (changedConfigEvent)="getChangedConfig($event)" [plugin]="category?.config.plugin.value"
+        [serviceStatus]="getServiceStatus()" (changedAdvanceConfigEvent)="getChangedAdvanceConfiguration($event)"
+        (formStatusEvent)="validConfigurationForm = $event"></app-configuration-group>
+      <div class="container is-fluid" *ngIf="category">
+        <div class="columns" *ngIf="rolesService.hasEditPermissions()">
+          <div class="column">
+            <button [disabled]="checkFormState()" [appDisableUntilResponse]="reenableButton"
+              class="button is-small is-link ml-4" (click)="saveConfiguration()">Save</button>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+    <ng-container *ngIf="showFilterConfiguration">
+      <app-configuration-group *ngIf="filterCategory" [category]="filterCategory" [sourceName]="quickviewFilterName"
+        [from]="quickviewFilterName" (changedConfigEvent)="getChangedFilterConfig($event)"
+        (formStatusEvent)="validFilterConfigForm = $event">
+      </app-configuration-group>
+      <div class="container is-fluid" *ngIf="filterCategory">
+        <div class="columns" *ngIf="rolesService.hasEditPermissions()">
+          <div class="column">
+            <button [disabled]="checkFilterFormState()" [appDisableUntilResponse]="reenableButton"
+              class="button is-small is-link ml-4" (click)="saveFilterConfiguration()">Save</button>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+    <ng-container *ngIf="showLogs && from !== 'notifications'">
+      <app-system-log [sourceName]="serviceName" #systemLogs></app-system-log>
+    </ng-container>
+    <!-- Notification Log in Quickview -->
+    <ng-container *ngIf="showLogs && from === 'notifications'">
+      <app-notification-log [sourceName]="serviceName" [notificationService]="serviceInfo.name" #notificationLogs>
+      </app-notification-log>
+    </ng-container>
+
+    <!-- Notification Instance Configuration in Quickview -->
+    <ng-container *ngIf="showNotificationConfiguration && from === 'notifications'">
+      <app-configuration-group #notificationConfigView *ngIf="category" [sourceName]="serviceName" [category]="category"
+        [from]="'notifications'" (changedConfigEvent)="getChangedNotificationConfig($event)"
+        (formStatusEvent)="validNotificationForm = $event">
+      </app-configuration-group>
+      <hr *ngIf="notification != undefined" class="hr-text notification-hr"
+        [attr.data-content]="'Rule - ' + notification.rule">
+      <div class="columns">
+        <div class="column">
+          <div class="field">
+            <app-configuration-group #ruleConfigView *ngIf="ruleCategory" [sourceName]="serviceName"
+              [category]="ruleCategory" [from]="'rule-modal'" (changedConfigEvent)="getChangedRuleConfig($event)"
+              (formStatusEvent)="validRuleConfigForm = $event">
+            </app-configuration-group>
+          </div>
+        </div>
+      </div>
+      <hr *ngIf="notification != undefined" class="hr-text notification-hr"
+        [attr.data-content]="'Delivery Channel - ' + notification.channel">
+      <div class="columns">
+        <div class="column">
+          <div class="field">
+            <app-configuration-group #deliveryConfigView *ngIf="deliveryCategory" [category]="deliveryCategory"
+              [sourceName]="serviceName" [from]="'delivery-modal'"
+              (changedConfigEvent)="getChangedDeliveryConfig($event)"
+              (formStatusEvent)="validDeliveryConfigForm = $event">
+            </app-configuration-group>
+          </div>
+        </div>
+      </div>
+      <div class="container is-fluid" *ngIf="rolesService.hasEditPermissions()">
+        <div class="columns">
+          <div class="column">
+            <div class="field is-grouped is-pulled-left">
+              <p class="control">
+                <button [disabled]="checkNotificationFormState()" class="button is-small is-link ml-4"
+                  (click)="saveNotificationConfiguration()" [appDisableUntilResponse]="reenableButton">Save</button>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+    <ng-container *ngIf="showTaskSchedule">
+      <app-task-schedule [taskSchedule]="taskSchedule"></app-task-schedule>
+    </ng-container>
+    <ng-container *ngIf="showReadings">
+      <app-asset-tracker [service]="readingService" [isAlive]="isAlive" [reenableButton]="reenableButton"
+        (selectedAsset)="selectAsset($event)" (reloadReadings)="getSouthservices()"
+        (exportReading)="getAssetReadings(readingService)"></app-asset-tracker>
+    </ng-container>
+  </app-quickview>
+</div>
+
+<app-confirmation-dialog id="delete-service-dialog" *ngIf="rolesService.hasEditPermissions()">
+  <header class="modal-card-head">
+    <span class="modal-card-title is-size-6">
+      {{ task && task?.execution == "task" ? "Delete Task": (from === 'notifications'
+      ? 'Delete Instance' : 'Delete Service')}}
+    </span>
+    <button class="delete" aria-label="close" (click)="closeModal('delete-service-dialog')"></button>
+  </header>
+  <section class="modal-card-body">
+    Deleting {{dialogServiceName}} {{ task && task?.execution == "task"? 'task': (from === 'notifications' ? 'instance'
+    : 'service')}} cannot be undone. Continue?
+  </section>
+  <footer class="modal-card-foot">
+    <button class="button is-small" (click)="closeModal('delete-service-dialog')">Cancel</button>
+    <button class="button is-small is-danger" (click)="deleteService()"
+      [appDisableUntilResponse]="reenableButton">Delete</button>
+  </footer>
+</app-confirmation-dialog>
+
+<app-confirmation-dialog id="delete-filter-dialog" *ngIf="rolesService.hasEditPermissions()">
+  <header class="modal-card-head">
+    <span class="modal-card-title is-size-6">Delete Filter</span>
+    <button class="delete" aria-label="close" (click)="closeModal('delete-filter-dialog')"></button>
+  </header>
+  <section class="modal-card-body">
+    Deleting {{filterName}} filter cannot be undone. Continue?
+  </section>
+  <footer class="modal-card-foot">
+    <button class="button is-small" (click)="closeModal('delete-filter-dialog')">Cancel</button>
+    <button class="button is-small is-danger" (click)="deleteFilterFromPipeline()"
+      [appDisableUntilResponse]="reenableButton">Delete</button>
+  </footer>
+</app-confirmation-dialog>
+<!-- <app-task-schedule #taskScheduleComponent [taskSchedule]="taskSchedule"></app-task-schedule> -->
+
+<app-confirmation-dialog id="asset-tracking-dialog">
+  <header class="modal-card-head">
+    <span class="modal-card-title is-size-6">Deprecate</span>
+    <button class="delete" aria-label="close" (click)="closeModal('asset-tracking-dialog')"></button>
+  </header>
+  <section class="modal-card-body">
+    Are you sure, <b>{{selectedAsset}}</b> will be deprecated if this action is continued?
+  </section>
+  <footer class="modal-card-foot">
+    <button class="button is-small" (click)="closeModal('asset-tracking-dialog')">Cancel</button>
+    <button class="button is-small is-danger" (click)="deprecateAsset(selectedAsset)">Yes</button>
+  </footer>
+</app-confirmation-dialog>
+
+<app-confirmation-dialog id="state-change-dialog">
+  <header class="modal-card-head">
+    <span class="modal-card-title is-size-6">{{dialogServiceName}}</span>
+    <button class="delete" aria-label="close" (click)="closeModal('state-change-dialog')"></button>
+  </header>
+  <section class="modal-card-body">
+    Are you sure, you want to {{btnText.toLowerCase()}} the <b>{{dialogServiceName}}</b> notification instance?
+  </section>
+  <footer class="modal-card-foot">
+    <button class="button is-small" (click)="closeModal('state-change-dialog')">Cancel</button>
+    <button class="button is-small is-outlined is-info" [appDisableUntilResponse]="reenableButton"
+      (click)="toggleState(btnText)">{{btnText}}</button>
+  </footer>
+</app-confirmation-dialog>
+
+<app-confirmation-dialog id="service-status-dialog">
+  <header class="modal-card-head">
+    <span class="modal-card-title is-size-6">
+      {{ service?.name || task?.name || filter?.name }}
+    </span>
+    <button type="button" aria-label="close" class="delete" (click)="closeModal('service-status-dialog')"></button>
+  </header>
+
+  <section class="modal-card-body">
+    <span *ngIf="service">
+      Are you sure, you want to {{ service.schedule_enabled ? 'disable' : 'enable' }} the <b>{{ service.name }}</b>
+      service?
+    </span>
+    <span *ngIf="task">
+      Are you sure, you want to {{ task.enabled ? 'disable' : 'enable' }} the <b>{{ task.name }}</b>
+      {{ task.execution === 'service' ? 'service' : 'task' }}?
+    </span>
+    <span *ngIf="filter">
+      Are you sure, you want to {{ filter.oldState ? 'disable' : 'enable' }} the <b>{{ filter.name }}</b> filter?
+    </span>
+  </section>
+
+  <footer class="modal-card-foot">
+    <button type="button" class="button is-small" (click)="closeModal('service-status-dialog')">Cancel</button>
+    <button *ngIf="service || task" type="button" class="button is-small is-outlined is-info"
+      [appDisableUntilResponse]="reenableButton" (click)="toggleServiceState({
+        name: service?.name || task?.name,
+        state: !(service?.schedule_enabled || task?.enabled)
+      })">
+      {{ (service?.schedule_enabled || task?.enabled) ? 'Disable' : 'Enable' }}
+    </button>
+
+    <button *ngIf="filter" type="button" class="button is-small is-outlined is-info"
+      [appDisableUntilResponse]="reenableButton" (click)="updateFilterConfiguration({
+        name: filter.name,
+        state: filter.newState,
+        category: filter.category
+      })">
+      {{ filter.oldState ? 'Disable' : 'Enable' }}
+    </button>
+  </footer>
+</app-confirmation-dialog>
+
+
+<app-confirmation-dialog id="from-toolbar-dialog">
+  <header class="modal-card-head">
+    <span class="modal-card-title is-size-6">Delete</span>
+    <button class="delete" aria-label="close" (click)="closeModal('from-toolbar-dialog')"></button>
+  </header>
+  <section class="modal-card-body">
+    Are you sure, You want to delete the selected nodes/connection?
+  </section>
+  <footer class="modal-card-foot">
+    <button class="button is-small" (click)="closeModal('from-toolbar-dialog')">Cancel</button>
+    <button class="button is-small is-danger" (click)="callDeleteAction()">Delete</button>
+  </footer>
+</app-confirmation-dialog>

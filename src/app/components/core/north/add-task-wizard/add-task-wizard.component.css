@@ -1,0 +1,23 @@
+.description {
+  flex-shrink: initial !important;
+}
+
+.container.is-fluid {
+  margin-top: 10px;
+}
+
+.service-checkbox {
+  padding-top: 0.375rem;
+}
+
+.help-icon {
+  cursor: pointer !important;
+}
+
+.enabled-field {
+  flex-grow: 0.5;
+}
+
+.box {
+  margin-bottom: 1.5rem !important;
+}

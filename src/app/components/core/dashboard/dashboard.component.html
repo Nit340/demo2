@@ -1,0 +1,75 @@
+<div class="dashboard-wrapper">
+  <!-- Top Controls Section -->
+  <div class="controls-section">
+    <!-- Left Controls Group -->
+    <div class="controls-left">
+      <div class="dropdown time-dropdown">
+        <button class="dropdown-button" (click)="toggleDropDown('time-dropdown')">
+          <span>{{optedTime}} minutes</span>
+          <i class="fas fa-angle-down"></i>
+        </button>
+        <div class="dropdown-content" *ngIf="dropdownOpen['time-dropdown']">
+          <a (click)="setTimeInterval(10)">10 minutes</a>
+          <a (click)="setTimeInterval(30)">30 minutes</a>
+          <a (click)="setTimeInterval(60)">60 minutes</a>
+          <a (click)="setTimeInterval(120)">2 hours</a>
+          <a (click)="setTimeInterval(360)">6 hours</a>
+          <a (click)="setTimeInterval(720)">12 hours</a>
+          <a (click)="setTimeInterval(1440)">24 hours</a>
+        </div>
+      </div>
+
+      <div class="dropdown graph-dropdown">
+        <button class="dropdown-button" (click)="toggleDropDown('graph-key-dropdown')">
+          <span>Select Graphs</span>
+          <i class="fas fa-angle-down"></i>
+        </button>
+        <div class="dropdown-content" *ngIf="dropdownOpen['graph-key-dropdown']">
+          <div *ngFor="let data of statisticsKeys" class="dropdown-item">
+            <label>
+              <input type="checkbox" 
+                     [checked]="isGraphSelected(data.key)"
+                     (change)="toggleGraphSelection(data.key)">
+              {{data.key}}
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Search Group -->
+    <div class="controls-right">
+      <div class="search-box">
+        <input type="text" 
+               placeholder="Search asset..." 
+               [(ngModel)]="assetSearchTerm"
+               (keyup.enter)="searchAsset()">
+        <button (click)="clearAsset()">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Asset Monitor Section -->
+  <div *ngIf="selectedAsset" class="asset-monitor-section">
+    <h3>Asset Monitor: {{selectedAsset}}</h3>
+    <app-asset-monitor [assetName]="selectedAsset"></app-asset-monitor>
+  </div>
+
+  <!-- Graphs Grid -->
+  <div class="graphs-grid">
+    <div *ngFor="let statistic of graphsToShow" class="graph-card">
+      <div class="graph-header">
+        <h4>{{ statistic.description || statistic.key }}</h4>
+      </div>
+      <div class="graph-container">
+        <app-chart [from]="'dashboard'" 
+                  [type]="statistic.chartType" 
+                  [data]="statistic.chartValue"
+                  [options]="chartOptions"></app-chart>
+      </div>
+      <div class="graph-footer">
+        Total since startup: <strong>{{ statistic.value | number }}</strong>
+      </div>
+    </div>
+  </div>
+</div>

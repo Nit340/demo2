@@ -1,0 +1,42 @@
+@media screen and (min-width: 769px) {
+  .field-body {
+    flex-grow: 2 !important;
+  }
+  .margin-bottom {
+    margin-bottom: -0.75rem;
+  }
+}
+
+.field.is-narrow {
+  width: 50% !important;
+}
+
+.notification-label {
+  max-width: 100px !important;
+}
+
+.hr-text {
+  opacity: .3;
+}
+
+.is-hovered {
+  margin-top: 7px;
+}
+
+.enable-div {
+  margin: 1.5rem 1rem;
+}
+
+.modal-card-head {
+  padding: 12px !important;
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+}
+
+.service-info {
+  white-space: nowrap;
+}
+
+.service-info-padding {
+  padding-left: 6.1rem !important;
+}

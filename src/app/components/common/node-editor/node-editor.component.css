@@ -1,0 +1,57 @@
+.rete {
+  height: 85vh;
+  padding: 0.5rem;
+}
+
+.custom-margin {
+  margin-top: -25px;
+}
+
+.expanded-width {
+  width: 91vw;
+}
+
+.collapsed-width {
+  width: 84vw;
+}
+
+.navbar-item {
+  justify-content: space-between;
+  align-items: normal;
+}
+
+.breadcrumb {
+  display: inline-block;
+}
+
+.hr-text {
+  height: 1.5em;
+}
+
+.help-icon {
+  margin: 12px 7px !important;
+}
+
+.notification-hr {
+  margin: 0.7rem !important;
+}
+
+::ng-deep [rete-context-menu] {
+  width: 80px !important;
+  text-align: center;
+  font-size: smaller;
+
+  :is(context-menu-search) input.search {
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  :is(context-menu-item).block {
+    background-color: black;
+    border-radius: 0.2rem !important;
+  }
+
+  :is(context-menu-item).block:hover {
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+  }
+}

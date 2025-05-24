@@ -1,0 +1,38 @@
+.panel.is-mobile {
+  margin-top: 10px;
+}
+
+#settings {
+  overflow: visible;
+}
+#settings-content {
+  overflow: visible;
+}
+
+@media screen and (min-width: 769px) {
+  #connection-content {
+    overflow: visible;
+  }
+}
+
+.conn-info {
+  text-align: right;
+  font-size: 0.85em;
+  color: darkgray;
+}
+
+.alert-box {
+  margin-top: 1rem !important;
+}
+
+.alpha-control {
+  margin-top: 32px;
+}
+
+.no-padding {
+  padding: 0px !important;
+}
+
+.additional-services-text {
+  font-size: 0.75rem;
+}

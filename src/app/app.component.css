@@ -1,0 +1,51 @@
+.overlay {
+  background: rgba(0, 0, 0, 0.5);
+  position: absolute;
+  left: auto;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 999;
+  text-align: center;
+  width: 100%;
+
+  @media screen and (max-width: 768px) {
+    height: 95%;
+  }
+
+  @media screen and (min-width: 770px) {
+    height: 100%;
+  }
+}
+
+@media screen and (min-width: 1025px) {
+  .is-sidebar-menu {
+    flex-basis: auto;
+    flex-grow: unset;
+    flex-shrink: unset;
+  }
+
+  .is-sidebar-menu.is-2 {
+    width: 14.66667%;
+  }
+
+  .expanded-mode-right-pane {
+    width: 85%;
+  }
+
+  .narrow-mode-right-pane {
+    width: 93%;
+  }
+}
+
+.is-fullheight {
+  position: relative;
+  min-height: calc(100vh - (3.25rem - .75rem));
+  max-height: calc(100vh - (3.25rem - .75rem));
+  height: calc(100vh - (3.25rem - .75rem));
+  overflow: auto;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}

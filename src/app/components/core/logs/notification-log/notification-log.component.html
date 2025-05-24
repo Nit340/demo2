@@ -1,0 +1,132 @@
+<div [ngClass]="{'container is-fluid': !sourceName}">
+  <div class="card" [ngClass]="{'custom-quickview-card': sourceName}">
+    <div class="breadcrumb-container" *ngIf="sourceName; else cardHeaderTemplate">
+      <nav class="breadcrumb" aria-label="breadcrumbs" [ngClass]="{'quickview-breadcrumb': sourceName}">
+        <ul>
+          <li class="is-active"><a>{{sourceName}}</a></li>
+          <li class="is-active">
+            <a href="#" aria-current="page">Logs</a>
+          </li>
+        </ul>
+      </nav>
+      <div *ngIf="refreshInterval !== -1" class="fix-pad auto-refresh">
+        <label class="checkbox" [ngClass]="{'quickview-label': sourceName}">
+          <input class="checkmark" type="checkbox" [checked]='isAlive' (click)="toggleAutoRefresh($event)">
+          Auto Refresh
+        </label>
+      </div>
+    </div>
+    <ng-template #cardHeaderTemplate>
+      <header class="card-header">
+        <div class="card-header-title">
+          <span>Notification Logs</span>
+          <button *ngIf="!isAlive" title="Reload" (click)="getNotificationLogs()" class="button is-small" id="refresh-check">
+            <i class="fa fa-sm fa-sync" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div *ngIf="refreshInterval !== -1" class="fix-pad auto-refresh">
+          <label class="checkbox">
+            <input class="checkmark" type="checkbox" [checked]='isAlive' (click)="toggleAutoRefresh($event)">
+            Auto Refresh
+          </label>
+        </div>
+      </header>
+    </ng-template>
+    <div class="card-content">
+      <div class="content">
+        <div class="columns">
+          <div class="column">
+            <label class="label">Source</label>
+            <div id="dropdown" class="dropdown">
+              <div class="dropdown-trigger">
+                <button class="button is-fullwidth is-small" aria-haspopup="true" aria-controls="dropdown-menu"
+                  (click)="toggleDropDown('dropdown')">
+                  <span>{{source == ''? "ALL": source.toUpperCase()}}</span>
+                  <span class="icon is-small">
+                    <i class="fa fa-sm fa-angle-down" aria-hidden="true"></i>
+                  </span>
+                </button>
+              </div>
+              <div class="dropdown-menu" id="dropdown-menu" role="menu">
+                <div class="dropdown-content">
+                  <a class="dropdown-item" (click)="toggleDropDown('dropdown');filterSource('source', '')">ALL</a>
+                  <a class="dropdown-item" *ngFor="let s of logSourceList"
+                    (click)="toggleDropDown('dropdown');filterSource('source', s.code)">
+                    {{s.code}}{{s.description
+                    != '' ? ' - ' + s.description : ''}}
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="column">
+            <label class="label">Severity</label>
+            <div id="severity-dropdown" class="dropdown">
+              <div class="dropdown-trigger">
+                <button class="button is-fullwidth is-small" aria-haspopup="true" aria-controls="dropdown-menu"
+                  (click)="toggleDropDown('severity-dropdown')">
+                  <span>{{severity.toUpperCase()}}</span>
+                  <span class="icon is-small">
+                    <i class="fa fa-sm fa-angle-down" aria-hidden="true"></i>
+                  </span>
+                </button>
+              </div>
+              <div class="dropdown-menu" id="dropdown-menu" role="menu">
+                <div class="dropdown-content">
+                  <a class="dropdown-item" *ngFor="let severity of logSeverityList"
+                    (click)="toggleDropDown('severity-dropdown');filterSource('severity', severity.name)">
+                    {{severity.name}}
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="!sourceName" class="column">
+            <label class="label">Search</label>
+            <input [disabled]="notificationLogs?.length < 2" #nameField type="search"
+              class="input is-fullwidth is-small" placeholder="search text by name" [(ngModel)]="searchTerm" />
+          </div>
+        </div>
+      </div>
+      <ng-container *ngIf="notificationLogs?.length > 0; else no_data_div">
+        <table *ngIf="(notificationLogs | SearchPipe: searchTerm)?.length !== 0"
+          class="table is-narrow is-responsive is-hoverable" cellpadding="0" cellspacing="0">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Name</th>
+              <th>Severity</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let log of notificationLogs | SearchPipe:searchTerm">
+              <td>
+                <small>{{log.timestamp | dateparser: 'YYYY-MM-DD HH:mm:ss'}}</small>
+              </td>
+              <td><small>{{log.details.name}}</small></td>
+              <td><small>{{log.severity}}</small></td>
+              <td><small>{{log.source}}</small></td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="(notificationLogs | SearchPipe: searchTerm)?.length !== 0; else no_matching_entry">
+          <app-pagination [count]="recordCount" [page]="page" [perPage]="limit" [totalPage]='totalPagesCount'
+            (onRangeChange)="resetLimitPerPage($event)" (goPrev)="onPrev()" (goNext)="onNext()" (goFirst)="onFirst()"
+            (goLast)="onLast()" (goPage)="goToPage($event)">
+          </app-pagination>
+        </div>
+      </ng-container>
+      <ng-template #no_matching_entry>
+        <div class="card-content">
+          <div class="has-text-centered"><small class="text-secondary has-text-grey-light">No matching log entries
+              found.</small></div>
+        </div>
+      </ng-template>
+      <ng-template #no_data_div>
+        <div class="has-text-centered"><small class="text-secondary has-text-grey-light">No notification logs
+            found.</small></div>
+      </ng-template>
+    </div>
+  </div>
+</div>

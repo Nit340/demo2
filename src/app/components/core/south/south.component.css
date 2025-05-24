@@ -1,0 +1,72 @@
+.align-content {
+  vertical-align: top;
+}
+
+.align-th {
+  vertical-align: middle;
+}
+
+.content-pad {
+  padding-top: 0.8em;
+}
+
+.is-text {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.align-right {
+  text-align: right;
+}
+
+.border-fix {
+  border: none;
+}
+
+.fade {
+  background-color: #f5f5f5 !important;
+}
+
+.readings-count {
+  vertical-align: middle;
+  max-width: max-content;
+}
+
+.service-name {
+  padding-top: 0;
+}
+
+#deprecate_event_div {
+  padding-right: 10px;
+  color: #363636;
+}
+
+.tooltip {
+  opacity: 1.0 !important;
+}
+
+.open i.fa-angle-right {
+  transform: rotate(270deg)
+}
+
+.is-borderless td,
+.is-borderless th {
+  border: 0;
+}
+
+.tooltip {
+  opacity: 1.0 !important;
+}
+
+.is-hovered {
+  margin-top: 0.5em;
+}
+
+.flow-editor {
+  vertical-align: top;
+  background: none;
+  border: none;
+  padding-top: 3px !important;
+  padding-bottom: 0px !important;
+  font-size: 14px;
+}

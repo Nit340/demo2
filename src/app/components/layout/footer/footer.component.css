@@ -1,0 +1,11 @@
+.footer {
+    position: relative;
+    vertical-align: top;
+    max-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    width: -webkit-fill-available;
+    top: 0;
+    bottom: 0;
+    padding: 10px;
+}

@@ -1,0 +1,39 @@
+.help {
+    font-weight: 400;
+    margin-top: 0;
+    max-width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.btn-panel {
+  visibility: hidden;
+}
+
+.lower-btn-panel {
+  margin-top: -6px;
+}
+
+.upper-btn-panel {
+  margin-top: -11px;
+}
+
+.btn-panel-container {
+  height: 15px;
+  position: relative;
+  z-index: 5;
+  display: flex;
+}
+
+.items-container:hover .btn-panel {
+  visibility: visible;
+}
+
+.export-btn {
+  width: 10px;
+}
+
+.toggle-btn-container {
+  margin-top: -10px;
+}

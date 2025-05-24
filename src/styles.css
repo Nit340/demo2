@@ -1,0 +1,526 @@
+/* You can add global styles to this file, and also import other style files */
+
+@import '~codemirror/lib/codemirror.css';
+@import '~codemirror/addon/fold/foldgutter.css';
+@import '~codemirror/addon/lint/lint.css';
+@import '~codemirror/theme/darcula.css';
+@import 'bulma/css/bulma.css';
+@import '@creativebulma/bulma-tooltip/dist/bulma-tooltip.min.css';
+@import 'bulma-steps/dist/css/bulma-steps.min.css';
+@import '@fortawesome/fontawesome-free/css/all.min.css';
+@import "~bootstrap-icons/font/bootstrap-icons.css";
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+html {
+  overflow-y: hidden;
+}
+
+html,
+.footer {
+  background-color: #f5f5f5 !important;
+}
+
+#app {
+  min-height: 100%;
+}
+
+table.scroll {
+  overflow-x: auto;
+  display: block;
+}
+
+table.scroll tbody {
+  overflow-y: scroll;
+  overflow-x: auto;
+}
+
+.fixed-overflow {
+  overflow-x: hidden;
+  height: 100%;
+}
+
+.sidebar {
+  z-index: 10 !important;
+  padding-top: 0px;
+}
+
+.app-navbar {
+  box-shadow: 0 2px 3px hsla(0, 0%, 7%, .1), 0 0 0 1px hsla(0, 0%, 7%, .1);
+}
+
+.card {
+  margin-top: 10px;
+}
+
+.card-header {
+  background-color: whitesmoke;
+}
+
+.card-content {
+  overflow: auto;
+}
+
+.dropdown-list[_ngcontent-c8] {
+  position: relative !important;
+}
+
+.card-header-title {
+  font-size: 0.9rem;
+  padding: 0.75rem 1.5rem;
+  max-height: 48px !important;
+}
+
+.add-btn {
+  font-size: 0.9rem;
+}
+
+#card-title {
+  overflow: hidden;
+}
+
+.app-loading {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.app-loading .spinner {
+  height: 200px;
+  width: 200px;
+  animation: rotate 2s linear infinite;
+  transform-origin: center center;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: auto;
+}
+
+.app-loading .spinner .path {
+  stroke-dasharray: 1, 200;
+  stroke-dashoffset: 0;
+  animation: dash 1.5s ease-in-out infinite;
+  stroke-linecap: round;
+  stroke: #ddd;
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dash {
+  0% {
+    stroke-dasharray: 1, 200;
+    stroke-dashoffset: 0;
+  }
+
+  50% {
+    stroke-dasharray: 89, 200;
+    stroke-dashoffset: -35px;
+  }
+
+  100% {
+    stroke-dasharray: 89, 200;
+    stroke-dashoffset: -124px;
+  }
+}
+
+.logo {
+  width: 100px;
+  height: 100px;
+  background: url(./assets/favicon.ico) center center no-repeat;
+}
+
+.cat-desc {
+  background-color: whitesmoke;
+  font-weight: bold;
+}
+
+.cat-desc a {
+  font-weight: bold;
+}
+
+.child-panel {
+  display: none;
+}
+
+.node-content-wrapper.node-content-wrapper-active:hover,
+.node-content-wrapper-active.node-content-wrapper-focused {
+  background: transparent;
+  font-weight: 500;
+  box-shadow: inset 0 0 0px;
+  color: #707070;
+}
+
+.node-content-wrapper:hover {
+  background: transparent;
+  box-shadow: inset 0 0 0px;
+  color: #707070;
+}
+
+.navbar-menu {
+  box-shadow: none !important;
+}
+
+.fix-pad {
+  padding-top: 1.0rem;
+}
+
+@media only screen and (max-width: 768px) {
+  .modal-card {
+    padding-top: 4.00rem !important;
+  }
+}
+
+.no-rec {
+  color: darkgray;
+}
+
+.tag-syslog {
+  border-radius: 2px !important;
+  font-size: .75rem !important;
+  height: 1.3em !important;
+  line-height: 1.3 !important;
+  padding-left: 0.25em !important;
+  padding-right: .25em !important;
+}
+
+@media screen and (min-height: 955px) {
+  table.scroll {
+    max-height: 72vh;
+  }
+
+  .page-container {
+    min-height: 93%;
+  }
+}
+
+@media screen and (min-height: 800px) and (max-height: 955px) {
+  table.scroll {
+    max-height: 70vh;
+  }
+
+  .page-container {
+    min-height: 92%;
+  }
+}
+
+@media screen and (min-height: 600px) and (max-height: 800px) {
+  table.scroll {
+    max-height: 62vh;
+  }
+
+  .page-container {
+    min-height: 89%;
+  }
+}
+
+@media screen and (max-height: 600px) {
+  table.scroll {
+    max-height: 49vh;
+  }
+
+  .page-container {
+    min-height: 87%;
+  }
+}
+
+.page-container {
+  padding-bottom: 20px;
+}
+
+.page-container:after {
+  content: "";
+  display: block;
+}
+
+/**
+Custom css for bulma dropdown
+Card Modal dropdown issue(overlapping issue) https://github.com/jgthms/bulma/issues/936
+Bulma Burger Dropdown rendering under other elements https://github.com/jgthms/bulma/issues/1655
+*/
+.dropdown {
+  width: 100%;
+}
+
+.dropdown-trigger {
+  width: 100%
+}
+
+.dropdown-trigger>.button {
+  display: flex;
+  width: 100%;
+  justify-content: space-between
+}
+
+a.dropdown-item:hover {
+  background-color: #3273dc;
+  color: #fff;
+}
+
+.dropdown-content {
+  max-height: 21rem;
+  overflow: auto;
+}
+
+#avail-plugin {
+  padding: 0%;
+}
+
+#refresh-check,
+#refresh-tree,
+#config-icon {
+  vertical-align: middle;
+  background: none;
+  border: none;
+}
+
+.select::after {
+  font-size: x-small;
+}
+
+.select:not(.is-multiple):not(.is-loading)::after {
+  border-color: grey !important;
+  border-width: 2.25px !important;
+  border-radius: 1px !important;
+}
+
+.icon:hover {
+  opacity: 0.8;
+}
+
+/* For modal card window */
+.modal-disabled {
+  pointer-events: none;
+}
+
+div:has(div.modal-disabled) {
+  cursor: not-allowed;
+}
+
+.blur {
+  filter: blur(1px);
+}
+
+table thead th {
+  font-size: 0.9rem !important;
+  font-weight: 500;
+}
+
+.title-name {
+  font-size: 0.9rem;
+}
+
+.icon-group {
+  padding-left: 16px;
+}
+
+.service-info {
+  max-width: 1344px;
+  margin: auto;
+  padding-bottom: 10px;
+}
+
+.service-info-text {
+  padding-left: 16px;
+}
+
+.config-div {
+  margin-top: 1vw;
+  margin-bottom: 1vw;
+}
+
+@media screen and (min-width: 769px) {
+  .view-content {
+    display: block !important;
+  }
+
+  .last-step-field {
+    flex-grow: 2 !important;
+  }
+}
+
+span.tooltip {
+  border-bottom: none;
+}
+
+.description-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 32rem
+}
+
+#confirmation-execute-dialog .modal-card-body {
+  min-height: 22vh;
+}
+
+.info-icon {
+  color: gray;
+}
+
+.plus-icon {
+  line-height: 1;
+}
+
+.bi-xs {
+  font-size: 0.75rem;
+}
+
+.bi-sm,
+.text-btn,
+.steps-sm {
+  font-size: 0.85rem;
+}
+
+.bi-md {
+  font-size: 1rem;
+}
+
+.bi-lg {
+  font-size: 1.15rem;
+}
+
+.bi-xl {
+  font-size: 1.35rem;
+}
+
+.bi:hover:not(.parent-icon):not(.child-icon) {
+  color: rgb(91, 89, 89);
+}
+
+.desc-text {
+  font-size: 0.95rem;
+}
+
+.help-pad {
+  margin: 17px 7px;
+  font-size: 0.9rem;
+}
+
+.is-hovered {
+  cursor: pointer !important;
+}
+
+.is-horizontal .label {
+  font-size: 0.9rem;
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.lbl-child {
+  font-size: 0.8rem !important;
+}
+
+.card-header-title {
+  font-weight: 500;
+}
+
+.cog-icon {
+  margin: auto;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.required-field {
+  border-color: red;
+}
+
+.message.is-warning {
+  margin-bottom: 0px !important;
+}
+
+.message.is-warning .message-body {
+  padding: 1em 0.75em !important
+}
+
+.is-size-9 {
+  font-size: 0.9rem !important;
+}
+
+.input,
+.textarea,
+.select select,
+.CodeMirror-wrap {
+  border-radius: 2px !important;
+}
+
+.CodeMirror {
+  height: auto;
+}
+
+.CodeMirror-scroll {
+  max-height: 300px;
+}
+
+.breadcrumb-padding {
+  padding: 0 0.75em;
+}
+
+.hr-text {
+  background-color: #fff !important;
+  line-height: 1em;
+  position: relative;
+  outline: 0;
+  border: 0;
+  color: black;
+  text-align: center;
+  opacity: .5;
+}
+
+.hr-text:before {
+  content: '';
+  background: linear-gradient(to right, transparent, #818078, transparent);
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 1px;
+}
+
+.hr-text:after {
+  content: attr(data-content);
+  position: relative;
+  display: inline-block;
+  color: black;
+  padding: 0 .5em;
+  line-height: 1.5em;
+  color: #818078;
+  background-color: #fff;
+}
+
+.content table td {
+  padding: 0.25em 0.5em;
+}
+
+.steps-content {
+  width: 100%;
+}
+
+.custom-viewport {
+  max-width: 65vw;
+  max-height: 45vh;
+  overflow: hidden;
+}
+
+.scrollable {
+  overflow: auto !important;
+}
+
+/*****************/

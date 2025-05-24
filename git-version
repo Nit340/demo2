@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+create_git_version_info_json () {
+    > src/git-version.json
+    echo '{"hash": ""}' >> src/git-version.json
+}
+
+DIR=".git"
+if [ ! -d "$DIR" ]; then
+  echo 'WARNING: This is not a git repository!' >&2
+  create_git_version_info_json
+  exit 0;
+fi
+
+if ! [ -x "$(command -v git)" ]; then
+  echo 'WARNING: git is not installed!' >&2
+  create_git_version_info_json
+else
+  v=$(git --version)
+  echo $v
+  if [[ $v == "git version 2"* ]]; then
+    node grab-git-info
+  else
+    create_git_version_info_json
+  fi
+fi

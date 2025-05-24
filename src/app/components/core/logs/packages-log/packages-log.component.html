@@ -1,0 +1,57 @@
+<div class="container is-fluid">
+  <div class="card">
+    <header class="card-header">
+      <div class="card-header-title">
+        <span>Package Logs</span>
+        <button *ngIf="!isAlive" title="Reload" (click)="getPackagesLog()" class="button is-small" id="refresh-check">
+          <i class="fa fa-sm fa-sync" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div *ngIf="refreshInterval !== -1" class="fix-pad auto-refresh">
+        <label class="checkbox">
+          <input class="checkmark" type="checkbox" [checked]='isAlive' (click)="toggleAutoRefresh($event)">
+          Auto Refresh
+        </label>
+      </div>
+    </header>
+    <div class="card-content">
+      <ng-container *ngIf="logList?.length > 0; else no_data_div">
+        <table class="table is-narrow scroll is-responsive is-hoverable" cellpadding="0" cellspacing="0">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let log of logList">
+              <td style="vertical-align: middle;">
+                <small>
+                  {{ log.timestamp | dateparser:"YYYY-MM-DD HH:mm:ss" }}
+                </small>
+              </td>
+              <td style="vertical-align: middle;">
+                {{ log.name ? log.name : '' }}
+              </td>
+              <td style="vertical-align: middle;">
+                <a (click)="showLogs(log.filename)" class="button is-text text-btn">
+                  view
+                </a>
+              </td>
+              <td style="vertical-align: middle;">
+                <a (click)="downloadLogs(log.filename)" class="button is-text text-btn">
+                  download
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </ng-container>
+      <ng-template #no_data_div>
+        <div class="has-text-centered"><small class="text-secondary has-text-grey-light">No package logs found.</small>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</div>
+<app-view-logs (notify)='onNotify()'></app-view-logs>

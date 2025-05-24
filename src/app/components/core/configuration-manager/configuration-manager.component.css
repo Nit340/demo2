@@ -1,0 +1,50 @@
+.panel {
+    background-color: #fff;
+}
+
+.columns {
+  margin-top: 0px;
+}
+
+.card {
+  margin-top: 0px !important;
+}
+
+.column {
+  padding-top: 0px !important;
+}
+
+#root-children {
+  border-left: 1px solid #dbdbdb;
+  border-right: 1px solid #dbdbdb;
+}
+
+.no-cat {
+  justify-content: center;
+}
+
+.empty-tree {
+  display: none;
+}
+
+.save-btn {
+  margin-left: 10px !important;
+}
+
+.panel-block {
+  align-items: unset !important;
+  display: flow !important;
+}
+
+.category-tree {
+  padding-left: 2px;
+}
+
+
+::ng-deep .node-content-wrapper-active {
+  background: none !important;
+}
+
+::ng-deep .tree-children .toggle-children, ::ng-deep .node-wrapper .toggle-children {
+  opacity: 0.4;
+}

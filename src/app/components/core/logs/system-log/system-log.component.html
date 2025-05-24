@@ -1,0 +1,149 @@
+<div class="container is-fluid">
+  <div class="card" [ngClass]="{'custom-quickview-card': sourceName}">
+    <div class="breadcrumb-container" *ngIf="sourceName; else cardHeaderTemplate">
+      <nav class="breadcrumb" aria-label="breadcrumbs" [ngClass]="{'quickview-breadcrumb': sourceName}">
+        <ul>
+          <li class="is-active"><a>{{sourceName}}</a></li>
+          <li class="is-active">
+            <a href="#" aria-current="page">Logs</a>
+          </li>
+        </ul>
+      </nav>
+      <div *ngIf="refreshInterval !== -1 && page === 1" class="fix-pad auto-refresh">
+        <label class="checkbox" [ngClass]="{'quickview-label': sourceName}">
+          <input class="checkmark" type="checkbox" [checked]='isAlive'
+            (click)="toggleAutoRefresh($event.target.checked)">
+          Auto Refresh
+        </label>
+      </div>
+    </div>
+    <ng-template #cardHeaderTemplate>
+      <header class="card-header">
+        <div class="card-header-title">
+          <span>System Logs</span>
+          <a *ngIf="!isAlive || page > 1" (click)="onFirst()" title="Reload" class="button is-small" id="refresh-check">
+            <i class="fa fa-sm fa-sync" aria-hidden="true"></i>
+          </a>
+        </div>
+        <div *ngIf="refreshInterval !== -1 && page === 1" class="fix-pad auto-refresh">
+          <label class="checkbox">
+            <input class="checkmark" type="checkbox" [checked]='isAlive'
+              (click)="toggleAutoRefresh($event.target.checked)">
+            Auto Refresh
+          </label>
+        </div>
+      </header>
+    </ng-template>
+    <div class="card-content">
+      <div class="content mb-3">
+        <div class="columns">
+          <div class="column">
+            <label class="label is-pulled-left">Service</label>
+            <ng-container *ngIf="showConfigButton && sourceName==undefined">
+              <button class="btn small-btn config-gear" (click)="navToInstanceConfiguration()">
+                <span class="ml-1 has-tooltip-right has-tooltip-arrow tooltip is-hovered"
+                  data-tooltip="Instance configuration details">
+                  <i class="bi bi-gear-wide-connected"></i>
+                </span>
+              </button>
+            </ng-container>
+            <div id="dropdown" class="dropdown">
+              <div class="dropdown-trigger">
+                <button class="button is-fullwidth is-small" aria-haspopup="true" aria-controls="dropdown-menu"
+                  (click)="toggleDropDown('dropdown')">
+                  <span>{{source == ''? "All": (source == 'storage'? capitalizeInitialWord(source): source)}}</span>
+                  <span class="icon is-small">
+                    <i class="fa fa-sm fa-angle-down" aria-hidden="true"></i>
+                  </span>
+                </button>
+              </div>
+              <div class="dropdown-menu" id="dropdown-menu" role="menu">
+                <div class="dropdown-content">
+                  <a class="dropdown-item" (click)="toggleDropDown('dropdown');filterData('source', 'all')">
+                    All
+                  </a>
+                  <ng-container *ngIf="sourceName==undefined; else sourceNameTemplate">
+                    <a class="dropdown-item" (click)="toggleDropDown('dropdown');filterData('source', 'storage')">
+                      Storage
+                    </a>
+                    <a class="dropdown-item" *ngFor="let schedule of scheduleData"
+                      (click)="toggleDropDown('dropdown');filterData('source', schedule.name)">
+                      {{schedule.name}}
+                    </a>
+                  </ng-container>
+                  <ng-template #sourceNameTemplate>
+                    <a class="dropdown-item" (click)="toggleDropDown('dropdown');filterData('source', sourceName)">
+                      {{sourceName}}
+                    </a>
+                  </ng-template>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="column">
+            <label class="label">Severity</label>
+            <div id="level-dropdown" class="dropdown">
+              <div class="dropdown-trigger">
+                <button class="button is-fullwidth is-small" aria-haspopup="true" aria-controls="dropdown-menu"
+                  (click)="toggleDropDown('level-dropdown')">
+                  <span>{{level == ''? "Debug and above": capitalizeInitialWord(level) + ' and above'}}</span>
+                  <span class="icon is-small">
+                    <i class="fa fa-sm fa-angle-down" aria-hidden="true"></i>
+                  </span>
+                </button>
+              </div>
+              <div class="dropdown-menu" id="dropdown-menu" role="menu">
+                <div class="dropdown-content">
+                  <a class="dropdown-item" (click)="toggleDropDown('level-dropdown');filterData('level', 'Debug')">
+                    Debug and above
+                  </a>
+                  <a class="dropdown-item" (click)="toggleDropDown('level-dropdown');filterData('level', 'Info')">
+                    Info and above
+                  </a>
+                  <a class="dropdown-item" (click)="toggleDropDown('level-dropdown');filterData('level', 'Warning')">
+                    Warning and above
+                  </a>
+                  <a class="dropdown-item" (click)="toggleDropDown('level-dropdown');filterData('level', 'Error')">
+                    Error and above
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="column">
+            <label class="label">Search</label>
+            <input type="search" class="input is-fullwidth is-small" placeholder="search text" [(ngModel)]="searchTerm"
+              #search />
+          </div>
+        </div>
+      </div>
+      <ng-container *ngFor="let log of logs">
+        <p class="s-log" [innerHTML]="log"> </p>
+      </ng-container>
+      <ng-container *ngIf="logs?.length == 0">
+        <div class="has-text-centered">
+          <small *ngIf="page === 1" class="text-secondary has-text-grey-light">No matching log entries
+            found.</small>
+          <small *ngIf="page > 1" class="text-secondary has-text-grey-light">No older logs are available to be
+            shown.</small>
+        </div>
+
+      </ng-container>
+
+    </div>
+    <ng-container>
+      <div class="field has-addons pagination-section">
+        <p class="control">
+          <button class="button is-small" (click)="onPrev()" [disabled]="offset <= 0">
+            <span>Newer</span>
+          </button>
+        </p>
+        <p class="control">
+          <button class="button is-small" (click)="onNext()" [disabled]="logs?.length == 0">
+            <span>Older</span>
+          </button>
+        </p>
+      </div>
+    </ng-container>
+  </div>
+</div>

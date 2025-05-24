@@ -1,0 +1,28 @@
+@media screen and (min-height: 800px) and (max-height: 955px) {
+  table.scroll {
+    max-height: 65vh;
+  }
+}
+
+@media screen and (max-height: 600px) {
+  table.scroll {
+    max-height: 48vh;
+  }
+}
+
+.fa-minus-circle {
+  color: rgb(178, 34, 34)
+}
+
+.fade {
+  background-color:#f5f5f5 !important
+}
+
+.fa::before {
+  display: inline-block;
+}
+
+.ed-btn {
+  height: auto;
+  opacity: 0.8;
+}

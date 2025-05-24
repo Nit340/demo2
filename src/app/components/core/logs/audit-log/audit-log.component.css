@@ -1,0 +1,39 @@
+table {
+  overflow-x: auto;
+  display: block;
+}
+
+table tbody {
+  overflow-y: scroll;
+  overflow-x: auto;
+}
+
+.card { overflow: visible;}
+.card-content { overflow: visible; }
+
+.dropdown-trigger > .button {
+  width: 80%;
+}
+
+.tooltip {
+  opacity: 1.0 !important;
+}
+
+#refresh-check {
+  margin-left: 3px;
+}
+
+.auto-refresh {
+  margin-right: 30px;
+  font-size: 0.75rem;
+  color: #363636;
+  font-weight: 700;
+}
+
+.checkmark {
+  vertical-align: middle !important;
+}
+
+.card-header-title {
+  max-height: 45px !important;
+}

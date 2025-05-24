@@ -1,0 +1,44 @@
+.fa::before {
+  display: inline-block;
+}
+
+.tabs {
+  position: relative;
+}
+
+.context-menu {
+  border: none;
+}
+
+@media only screen and (min-width: 1024px) {
+
+  .user-table,
+  .card-data {
+    overflow: visible;
+  }
+}
+
+.user-table {
+  width: 92%;
+}
+
+.tags-groups {
+  white-space: nowrap;
+}
+
+.desc-col {
+  max-width: 18rem;
+}
+
+.is-hoverable.user-table tr:hover .context-menu {
+  background-color: #fafafa;
+}
+
+.action-items {
+  position: absolute;
+  right: 0;
+}
+
+#add-user {
+  border-bottom-width: 0;
+}

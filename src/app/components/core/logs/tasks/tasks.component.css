@@ -1,0 +1,26 @@
+.cancel-btn {
+    height: 3.25em;
+}
+
+.fade {
+    background-color:#f5f5f5 !important;
+}
+
+#refresh-check {
+  margin-left: 3px;
+}
+
+.auto-refresh {
+  margin-right: 30px;
+  font-size: 0.75rem;
+  color: #363636;
+  font-weight: 700;
+}
+
+.checkmark {
+  vertical-align: middle !important;
+}
+
+.card-header-title {
+  max-height: 45px !important;
+}
