@@ -5,7 +5,9 @@ import { catchError, map } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
 
-@Injectable()
+@Injectable({
+  providedIn: 'root'  // Add this line to make the service available application-wide
+})
 export class AssetsService {
   private GET_ASSET = environment.BASE_URL + 'asset';
   private TRACK_SERVICE_URL = environment.BASE_URL + 'track';

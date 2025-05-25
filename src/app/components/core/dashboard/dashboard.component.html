@@ -37,22 +37,65 @@
       </div>
     </div>
 
-    <!-- Right Search Group -->
+    <!-- Right Controls Group - Asset Search -->
     <div class="controls-right">
       <div class="search-box">
         <input type="text" 
-               placeholder="Search asset..." 
-               [(ngModel)]="assetSearchTerm"
+               [(ngModel)]="assetSearchTerm" 
+               placeholder="Search asset by name..."
                (keyup.enter)="searchAsset()">
-        <button (click)="clearAsset()">Clear</button>
+        <button (click)="searchAsset()" class="search-button">
+          <i class="fas fa-search"></i> Search
+        </button>
+        <button *ngIf="selectedAsset" 
+                (click)="clearAssetSearch()" 
+                class="clear-button">
+          <i class="fas fa-times"></i> Clear
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Asset Monitor Section -->
-  <div *ngIf="selectedAsset" class="asset-monitor-section">
-    <h3>Asset Monitor: {{selectedAsset}}</h3>
-    <app-asset-monitor [assetName]="selectedAsset"></app-asset-monitor>
+  <!-- Asset Data Section (shown only when asset is selected) -->
+  <div *ngIf="selectedAsset" class="asset-data-section">
+    <div class="section-header">
+      <h3>Asset: {{ selectedAsset }}</h3>
+      <div *ngIf="assetLoading" class="loading-indicator">
+        <i class="fas fa-spinner fa-spin"></i> Loading asset data...
+      </div>
+      <div *ngIf="assetError" class="error-message">
+        <i class="fas fa-exclamation-circle"></i> {{ assetError }}
+      </div>
+    </div>
+
+    <div *ngIf="assetReadings.length > 0" class="asset-readings">
+      <div class="readings-summary">
+        Found {{ assetReadings.length }} readings
+      </div>
+
+      <div class="readings-table-container">
+        <table class="readings-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Reading Data</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let reading of assetReadings">
+              <td>{{ reading.timestamp | date:'medium' }}</td>
+              <td>
+                <pre>{{ reading.reading | json }}</pre>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div *ngIf="!assetLoading && assetReadings.length === 0" class="no-readings">
+      No readings found for this asset
+    </div>
   </div>
 
   <!-- Graphs Grid -->

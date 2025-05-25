@@ -4,7 +4,7 @@ import { interval, Subject } from 'rxjs';
 import { takeWhile, takeUntil } from 'rxjs/operators';
 
 import { DateFormatterPipe } from '../../../pipes';
-import { AlertService, PingService, StatisticsService } from '../../../services';
+import { AlertService, PingService, StatisticsService,AssetsService } from '../../../services';
 import { DocService } from '../../../services/doc.service';
 import Utils, { CHART_COLORS, GRAPH_REFRESH_INTERVAL, STATS_HISTORY_TIME_FILTER } from '../../../utils';
 
@@ -35,9 +35,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   DEFAULT_LIMIT = 20;
   private isAlive: boolean;
   destroy$: Subject<boolean> = new Subject<boolean>();
+ 
+
+  // Asset Search Properties
   assetSearchTerm: string = '';
   selectedAsset: string = '';
-  
+  assetReadings: any[] = [];
+  assetLoading = false;
+  assetError = '';
+
   // Dropdown management
   dropdownOpen: { [key: string]: boolean } = {
     'time-dropdown': false,
@@ -49,6 +55,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private alertService: AlertService,
     private dateFormatter: DateFormatterPipe,
     private docService: DocService,
+     private assetsService: AssetsService ,
     private ping: PingService
   ) {
     this.isAlive = true;
@@ -87,18 +94,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     localStorage.setItem('STATS_HISTORY_TIME_FILTER', minutes.toString());
     this.getStatisticsHistory(minutes.toString());
   }
-
-  // Asset search methods
-  searchAsset(): void {
-    if (this.assetSearchTerm.trim()) {
-      this.selectedAsset = this.assetSearchTerm.trim();
-    }
-  }
   
-  clearAsset(): void {
-    this.selectedAsset = '';
-    this.assetSearchTerm = '';
-  }
 
   // Graph selection methods
   isGraphSelected(key: string): boolean {
@@ -280,5 +276,38 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.isAlive = false;
     this.destroy$.next(true);
     this.destroy$.unsubscribe();
+  }
+   // Updated Asset Search Methods
+  searchAsset(): void {
+    if (this.assetSearchTerm.trim()) {
+      this.selectedAsset = this.assetSearchTerm.trim();
+      this.fetchAssetReadings();
+    }
+  }
+
+  fetchAssetReadings(): void {
+    this.assetLoading = true;
+    this.assetError = '';
+    this.assetReadings = [];
+
+    this.assetsService.getAssetReadings(this.selectedAsset)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(
+        (data: any) => {
+          this.assetReadings = Array.isArray(data) ? data : [data];
+          this.assetLoading = false;
+        },
+        (error) => {
+          this.assetError = error.message || 'Failed to fetch asset readings';
+          this.assetLoading = false;
+        }
+      );
+  }
+
+  clearAssetSearch(): void {
+    this.selectedAsset = '';
+    this.assetSearchTerm = '';
+    this.assetReadings = [];
+    this.assetError = '';
   }
 }
