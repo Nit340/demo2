@@ -2,9 +2,9 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { map } from 'lodash';
 import { interval, Subject } from 'rxjs';
 import { takeWhile, takeUntil } from 'rxjs/operators';
-
+import { AssetDataService } from '../../../services/asset-data.Service';
 import { DateFormatterPipe } from '../../../pipes';
-import { AlertService, PingService, StatisticsService,AssetsService } from '../../../services';
+import { AlertService, PingService, StatisticsService,AssetsService} from '../../../services';
 import { DocService } from '../../../services/doc.service';
 import Utils, { CHART_COLORS, GRAPH_REFRESH_INTERVAL, STATS_HISTORY_TIME_FILTER } from '../../../utils';
 
@@ -55,7 +55,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private alertService: AlertService,
     private dateFormatter: DateFormatterPipe,
     private docService: DocService,
-     private assetsService: AssetsService ,
+     private assetdataService: AssetDataService ,
     private ping: PingService
   ) {
     this.isAlive = true;
@@ -284,26 +284,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.fetchAssetReadings();
     }
   }
-
-  fetchAssetReadings(): void {
-    this.assetLoading = true;
-    this.assetError = '';
-    this.assetReadings = [];
-
-    this.assetsService.getAssetReadings(this.selectedAsset)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(
-        (data: any) => {
-          this.assetReadings = Array.isArray(data) ? data : [data];
-          this.assetLoading = false;
-        },
-        (error) => {
-          this.assetError = error.message || 'Failed to fetch asset readings';
-          this.assetLoading = false;
-        }
-      );
-  }
-
+// In your component
+fetchAssetReadings(): void {
+  this.assetLoading = true;
+  this.assetError = '';
+  
+  // Use a very high limit (adjust based on your API's maximum allowed)
+  const MAX_LIMIT = 100000; // Set this to a safe upper bound
+  
+  this.assetdataService.getAssetReadings(this.selectedAsset, MAX_LIMIT)
+    .pipe(takeUntil(this.destroy$))
+    .subscribe(
+      (data: any) => {
+        this.assetReadings = Array.isArray(data) ? data : [data];
+        this.assetLoading = false;
+      },
+      (error) => {
+        this.assetError = error.message || 'Failed to fetch all readings';
+        this.assetLoading = false;
+      }
+    );
+}
   clearAssetSearch(): void {
     this.selectedAsset = '';
     this.assetSearchTerm = '';

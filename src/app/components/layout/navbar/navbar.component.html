@@ -7,10 +7,10 @@
     </div>
     <div *ngIf="viewPort !== 'mobile'">
       <div class="navbar-item">
-        <img src="assets/fledge.png" alt="" width="32" />
+        <img src="assets/favicon.png" alt="" width="32" />
         &nbsp;
         <b>
-          <a *ngIf="!pingInfo.version" href="/" style="color: #363636;">Fledge</a>
+          <a *ngIf="!pingInfo.version" href="/" style="color: #363636;">Inno</a>
           <a *ngIf="pingInfo.version" id="hover-link" class="tooltip has-tooltip-bottom has-tooltip-arrow"
             [attr.data-tooltip]="'v'+pingInfo.version" href="/" style="color: #363636;">Fledge</a>
         </b>

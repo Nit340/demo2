@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { AssetDataService } from '../../../services/asset-data.Service';
 
 import { DashboardComponent } from '.';
 import { DateFormatterPipe } from '../../../pipes';
@@ -22,7 +23,7 @@ import { AssetsComponent } from '../asset-readings/assets';
     ChartModule,
   
   ],
-  providers: [StatisticsService, DateFormatterPipe],
+  providers: [StatisticsService, DateFormatterPipe,AssetDataService],
   exports: []
 })
 export class DashboardModule { }
