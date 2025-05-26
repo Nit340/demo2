@@ -7,6 +7,15 @@ import { DateFormatterPipe } from '../../../pipes';
 import { AlertService, PingService, StatisticsService,AssetsService} from '../../../services';
 import { DocService } from '../../../services/doc.service';
 import Utils, { CHART_COLORS, GRAPH_REFRESH_INTERVAL, STATS_HISTORY_TIME_FILTER } from '../../../utils';
+import { Chart, ChartTypeRegistry, ChartConfiguration, registerables } from 'chart.js';
+Chart.register(...registerables);
+
+interface Reading {
+  timestamp: string;
+  reading: {
+    [key: string]: number; // Measurement types (e.g., temperature) and their values
+  };
+}
 
 // Define default graphs with unique colors
 const DEFAULT_GRAPHS = [
@@ -34,8 +43,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   public optedTime;
   DEFAULT_LIMIT = 20;
   private isAlive: boolean;
-  destroy$: Subject<boolean> = new Subject<boolean>();
- 
+  destroy$: Subject<boolean> = new Subject<boolean>(); // One chart per measurement type
+ private readingCharts: { [key: string]: Chart } = {};
+  private measurementCharts: { [key: string]: Chart } = {};
 
   // Asset Search Properties
   assetSearchTerm: string = '';
@@ -276,6 +286,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.isAlive = false;
     this.destroy$.next(true);
     this.destroy$.unsubscribe();
+   this.clearCharts();
   }
    // Updated Asset Search Methods
   searchAsset(): void {
@@ -284,31 +295,140 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.fetchAssetReadings();
     }
   }
-// In your component
-fetchAssetReadings(): void {
-  this.assetLoading = true;
-  this.assetError = '';
-  
-  // Use a very high limit (adjust based on your API's maximum allowed)
-  const MAX_LIMIT = 100000; // Set this to a safe upper bound
-  
-  this.assetdataService.getAssetReadings(this.selectedAsset, MAX_LIMIT)
-    .pipe(takeUntil(this.destroy$))
-    .subscribe(
-      (data: any) => {
-        this.assetReadings = Array.isArray(data) ? data : [data];
-        this.assetLoading = false;
+ fetchAssetReadings(): void {
+    this.assetLoading = true;
+    this.assetError = '';
+    const MAX_LIMIT = 100000;
+    
+    this.assetdataService.getAssetReadings(this.selectedAsset, MAX_LIMIT)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(
+        (data: any) => {
+          this.assetReadings = Array.isArray(data) ? data : [data];
+          this.createMeasurementCharts();
+          this.assetLoading = false;
+        },
+        (error) => {
+          this.assetError = error.message || 'Failed to fetch all readings';
+          this.assetLoading = false;
+        }
+      );
+  }
+
+  createMeasurementCharts(): void {
+    // Destroy existing charts first
+    Object.values(this.measurementCharts).forEach(chart => chart.destroy());
+    this.measurementCharts = {};
+
+    // Get all measurement types (e.g., temperature, humidity)
+    const measurementTypes = this.getMeasurementTypes();
+    
+    // Create one chart per measurement type
+    measurementTypes.forEach(type => {
+      const canvasId = `chart-${type}`;
+      setTimeout(() => {
+        this.createChartForMeasurement(canvasId, type);
+      }, 0);
+    });
+  }
+
+  getMeasurementTypes(): string[] {
+    const types = new Set<string>();
+    this.assetReadings.forEach(reading => {
+      Object.keys(reading.reading).forEach(key => types.add(key));
+    });
+    return Array.from(types);
+  }
+
+  createChartForMeasurement(canvasId: string, measurementType: string): void {
+    const ctx = document.getElementById(canvasId) as HTMLCanvasElement;
+    if (!ctx) return;
+
+    // Prepare data for this measurement type
+    const labels = this.assetReadings.map(r => new Date(r.timestamp));
+    const data = this.assetReadings.map(r => r.reading[measurementType] || null);
+
+    const config: ChartConfiguration<'line'> = {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: measurementType,
+          data: data,
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1,
+          tension: 0.1,
+          fill: true
+        }]
       },
-      (error) => {
-        this.assetError = error.message || 'Failed to fetch all readings';
-        this.assetLoading = false;
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              unit: 'hour',
+              tooltipFormat: 'MMM dd, yyyy - hh:mm a'
+            },
+            title: {
+              display: true,
+              text: 'Time'
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: measurementType
+            }
+          }
+        },
+        plugins: {
+          title: {
+            display: true,
+            text: `${measurementType} over Time`
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                return `${measurementType}: ${context.parsed.y}`;
+              }
+            }
+          }
+        }
       }
-    );
-}
+    };
+
+    this.measurementCharts[measurementType] = new Chart(ctx, config);
+  }
+  clearCharts(): void {
+    // Destroy reading charts
+    Object.values(this.readingCharts).forEach(chart => {
+      if (chart && typeof chart.destroy === 'function') {
+        chart.destroy();
+      }
+    });
+    this.readingCharts = {};
+
+    // Destroy measurement charts
+    Object.values(this.measurementCharts).forEach(chart => {
+      if (chart && typeof chart.destroy === 'function') {
+        chart.destroy();
+      }
+    });
+    this.measurementCharts = {};
+  }
+
+
+
   clearAssetSearch(): void {
     this.selectedAsset = '';
     this.assetSearchTerm = '';
     this.assetReadings = [];
     this.assetError = '';
+     // Clean up charts
+    Object.values(this.readingCharts).forEach(chart => chart.destroy());
+    this.readingCharts = {};
   }
+    
 }

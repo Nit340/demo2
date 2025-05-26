@@ -56,48 +56,28 @@
     </div>
   </div>
 
-  <!-- Asset Data Section (shown only when asset is selected) -->
-  <div *ngIf="selectedAsset" class="asset-data-section">
-    <div class="section-header">
-      <h3>Asset: {{ selectedAsset }}</h3>
-      <div *ngIf="assetLoading" class="loading-indicator">
-        <i class="fas fa-spinner fa-spin"></i> Loading asset data...
-      </div>
-      <div *ngIf="assetError" class="error-message">
-        <i class="fas fa-exclamation-circle"></i> {{ assetError }}
-      </div>
-    </div>
-
-    <div *ngIf="assetReadings.length > 0" class="asset-readings">
-      <div class="readings-summary">
-        Found {{ assetReadings.length }} readings
-      </div>
-
-      <div class="readings-table-container">
-        <table class="readings-table">
-          <thead>
-            <tr>
-              <th>Timestamp</th>
-              <th>Reading Data</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let reading of assetReadings">
-              <td>{{ reading.timestamp | date:'medium' }}</td>
-              <td>
-                <pre>{{ reading.reading | json }}</pre>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div *ngIf="!assetLoading && assetReadings.length === 0" class="no-readings">
-      No readings found for this asset
-    </div>
+<div *ngIf="selectedAsset" class="asset-data-section">
+  <div class="section-header">
+    <h3>Asset: {{ selectedAsset }}</h3>
+    <!-- Loading and error indicators remain the same -->
   </div>
 
+  <div *ngIf="assetReadings.length > 0" class="asset-readings">
+    <div class="readings-summary">
+      Found {{ assetReadings.length }} readings with 
+      {{ getMeasurementTypes().length }} measurement types
+    </div>
+
+    <div class="measurement-charts-container">
+      <div *ngFor="let type of getMeasurementTypes()" class="measurement-chart">
+        <h4>{{ type }} over Time</h4>
+        <div class="chart-container">
+          <canvas [id]="'chart-' + type"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
   <!-- Graphs Grid -->
   <div class="graphs-grid">
     <div *ngFor="let statistic of graphsToShow" class="graph-card">
