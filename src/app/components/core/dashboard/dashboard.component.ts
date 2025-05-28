@@ -7,6 +7,9 @@ import { DateFormatterPipe } from '../../../pipes';
 import { AlertService, PingService, StatisticsService,AssetsService} from '../../../services';
 import { DocService } from '../../../services/doc.service';
 import Utils, { CHART_COLORS, GRAPH_REFRESH_INTERVAL, STATS_HISTORY_TIME_FILTER } from '../../../utils';
+import enIN from 'date-fns/locale/en-IN';
+
+import 'chartjs-adapter-date-fns'; // Must be imported AFTER Chart.js
 import { Chart, ChartTypeRegistry, ChartConfiguration, registerables } from 'chart.js';
 Chart.register(...registerables);
 
@@ -339,68 +342,87 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
     return Array.from(types);
   }
-
-  createChartForMeasurement(canvasId: string, measurementType: string): void {
+createChartForMeasurement(canvasId: string, measurementType: string): void {
     const ctx = document.getElementById(canvasId) as HTMLCanvasElement;
     if (!ctx) return;
 
-    // Prepare data for this measurement type
-    const labels = this.assetReadings.map(r => new Date(r.timestamp));
+    // 1. Prepare data (original timestamps)
+    const timestamps = this.assetReadings.map(r => new Date(r.timestamp));
     const data = this.assetReadings.map(r => r.reading[measurementType] || null);
 
+    // 2. Pre-format X-axis labels in IST (same as tooltip)
+    const xAxisLabels = timestamps.map(date => 
+        date.toLocaleString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        })
+    );
+
     const config: ChartConfiguration<'line'> = {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: measurementType,
-          data: data,
-          backgroundColor: 'rgba(54, 162, 235, 0.2)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-          borderWidth: 1,
-          tension: 0.1,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          x: {
-            type: 'time',
-            time: {
-              unit: 'hour',
-              tooltipFormat: 'MMM dd, yyyy - hh:mm a'
-            },
-            title: {
-              display: true,
-              text: 'Time'
-            }
-          },
-          y: {
-            title: {
-              display: true,
-              text: measurementType
-            }
-          }
+        type: 'line',
+        data: {
+            labels: xAxisLabels, // Use pre-formatted IST labels
+            datasets: [{
+                label: measurementType,
+                data: data,
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                tension: 0.1,
+                fill: true
+            }]
         },
-        plugins: {
-          title: {
-            display: true,
-            text: `${measurementType} over Time`
-          },
-          tooltip: {
-            callbacks: {
-              label: (context) => {
-                return `${measurementType}: ${context.parsed.y}`;
-              }
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'category', // Switch to category axis (uses pre-formatted labels)
+                    title: {
+                        display: true,
+                        text: 'Time (IST)'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: measurementType
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: `${measurementType} over Time (IST)`
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => `${measurementType}: ${context.parsed.y}`,
+                        title: (items) => {
+                            if (!items.length) return '';
+                            return new Date(timestamps[items[0].dataIndex]).toLocaleString('en-IN', {
+                                timeZone: 'Asia/Kolkata',
+                                dateStyle: 'full',
+                                timeStyle: 'short'
+                            });
+                        }
+                    }
+                }
             }
-          }
         }
-      }
     };
 
+    // Destroy old chart if it exists
+    if (this.measurementCharts[measurementType]) {
+        this.measurementCharts[measurementType].destroy();
+    }
+
+    // Create new chart
     this.measurementCharts[measurementType] = new Chart(ctx, config);
-  }
+}
   clearCharts(): void {
     // Destroy reading charts
     Object.values(this.readingCharts).forEach(chart => {
