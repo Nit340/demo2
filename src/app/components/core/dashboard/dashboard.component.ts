@@ -343,85 +343,253 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return Array.from(types);
   }
 createChartForMeasurement(canvasId: string, measurementType: string): void {
-    const ctx = document.getElementById(canvasId) as HTMLCanvasElement;
-    if (!ctx) return;
+    const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+    if (!canvas) return;
 
-    // 1. Prepare data (original timestamps)
-    const timestamps = this.assetReadings.map(r => new Date(r.timestamp));
-    const data = this.assetReadings.map(r => r.reading[measurementType] || null);
+    // Set canvas dimensions with increased height
+    canvas.width = 1200;
+    canvas.height = 700;  // Increased from 500 to 700
 
-    // 2. Pre-format X-axis labels in IST (same as tooltip)
-    const xAxisLabels = timestamps.map(date => 
-        date.toLocaleString('en-IN', {
+    // Color generation function
+    const getColor = (index: number, total: number, alpha = 1) => {
+        const hue = (index * 360 / total) % 360;
+        return `hsla(${hue}, 70%, 50%, ${alpha})`;
+    };
+
+    // Check if readings are text-based or numerical
+    const firstReading = this.assetReadings[0]?.reading[measurementType];
+    const isTextData = typeof firstReading === 'string' && isNaN(Number(firstReading));
+
+    // Convert to IST and group by date
+    const dateMap = new Map<string, {dates: Date[], values: any[]}>();
+   
+    this.assetReadings.forEach(r => {
+        const date = new Date(r.timestamp);
+        // IST conversion (UTC+5:30)
+        date.setHours(date.getHours() + 5);
+        date.setMinutes(date.getMinutes() + 30);
+       
+        const dateKey = date.toLocaleDateString('en-IN', {
             timeZone: 'Asia/Kolkata',
-            month: 'short',
-            day: 'numeric',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+       
+        if (!dateMap.has(dateKey)) {
+            dateMap.set(dateKey, {dates: [], values: []});
+        }
+        dateMap.get(dateKey)!.dates.push(date);
+        dateMap.get(dateKey)!.values.push(r.reading[measurementType]);
+    });
+
+    // For text data (statuses) - use stacked bar chart
+    if (isTextData) {
+        const statusCountMap = new Map<string, number[]>();
+        const allStatuses = [...new Set(this.assetReadings.map(r => r.reading[measurementType]))];
+
+        allStatuses.forEach(status => {
+            statusCountMap.set(status, Array(dateMap.size).fill(0));
+        });
+
+        let dateIndex = 0;
+        dateMap.forEach((data, dateKey) => {
+            data.values.forEach(value => {
+                const currentCount = statusCountMap.get(value) || [];
+                currentCount[dateIndex] = (currentCount[dateIndex] || 0) + 1;
+                statusCountMap.set(value, currentCount);
+            });
+            dateIndex++;
+        });
+
+        const datasets = Array.from(statusCountMap.entries()).map(([status, counts], i) => {
+            const color = getColor(i, statusCountMap.size);
+            return {
+                label: status,
+                data: counts,
+                backgroundColor: color,
+                borderColor: color,
+                borderWidth: 1,
+                stack: 'stack1'
+            };
+        });
+
+        const config: ChartConfiguration<'bar'> = {
+            type: 'bar',
+            data: {
+                labels: Array.from(dateMap.keys()),
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Date (IST)'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Count'
+                        },
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: `${measurementType} Status Distribution (IST)`,
+                        font: { size: 16 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                return `${context.dataset.label}: ${context.parsed.y}`;
+                            }
+                        }
+                    },
+                    legend: {
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'rect',
+                            padding: 20,
+                            font: { size: 12 }
+                        }
+                    }
+                }
+            }
+        };
+
+        if (this.measurementCharts[measurementType]) {
+            this.measurementCharts[measurementType].destroy();
+        }
+        this.measurementCharts[measurementType] = new Chart(canvas, config);
+        return;
+    }
+
+    // Numerical data - line chart with points removed
+    const datasets = Array.from(dateMap.entries()).map(([dateKey, data], i) => {
+        const color = getColor(i, dateMap.size);
+        return {
+            label: dateKey,
+            data: data.values,
+            borderColor: color,
+            backgroundColor: getColor(i, dateMap.size, 0.2),
+            borderWidth: 2,
+            tension: 0.1,
+            pointRadius: 0,  // Removed points by setting radius to 0
+            pointHoverRadius: 0,  // Also remove hover points
+            fill: true
+        };
+    });
+
+    const allDates = Array.from(dateMap.values())[0]?.dates || [];
+    const labels = allDates.map(d => 
+        d.toLocaleTimeString('en-IN', {
+            timeZone: 'Asia/Kolkata',
             hour: '2-digit',
             minute: '2-digit',
             hour12: true
-        })
+        }).replace(' ', '')
     );
 
     const config: ChartConfiguration<'line'> = {
         type: 'line',
         data: {
-            labels: xAxisLabels, // Use pre-formatted IST labels
-            datasets: [{
-                label: measurementType,
-                data: data,
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1,
-                tension: 0.1,
-                fill: true
-            }]
+            labels: labels,
+            datasets: datasets
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    left: 20,
+                    right: 20,
+                    top: 20,
+                    bottom: 30
+                }
+            },
             scales: {
                 x: {
-                    type: 'category', // Switch to category axis (uses pre-formatted labels)
                     title: {
                         display: true,
-                        text: 'Time (IST)'
+                        text: 'Time of Day (IST)',
+                        padding: {top: 10}
+                    },
+                    ticks: {
+                        autoSkip: false,
+                        maxRotation: 0,
+                        minRotation: 0,
+                        padding: 5,
+                        callback: function(value: number, index: number) {
+                            const step = Math.max(1, Math.floor(labels.length / 10));
+                            return index % step === 0 ? labels[index] : '';
+                        },
+                        font: {
+                            size: 10
+                        }
+                    },
+                    grid: {
+                        display: false
                     }
                 },
                 y: {
                     title: {
                         display: true,
-                        text: measurementType
+                        text: measurementType,
+                        padding: {bottom: 10}
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
                     }
                 }
             },
             plugins: {
                 title: {
                     display: true,
-                    text: `${measurementType} over Time (IST)`
+                    text: `Daily ${measurementType} Patterns (IST)`,
+                    padding: { bottom: 20 },
+                    font: { size: 16 }
                 },
                 tooltip: {
                     callbacks: {
-                        label: (context) => `${measurementType}: ${context.parsed.y}`,
-                        title: (items) => {
-                            if (!items.length) return '';
-                            return new Date(timestamps[items[0].dataIndex]).toLocaleString('en-IN', {
-                                timeZone: 'Asia/Kolkata',
-                                dateStyle: 'full',
-                                timeStyle: 'short'
-                            });
-                        }
+                        label: (context) => `${context.dataset.label}: ${context.parsed.y}`,
+                        title: (items) => items.length ? `Time: ${items[0].label}` : ''
+                    },
+                    displayColors: true,
+                    padding: 10,
+                    bodyFont: { size: 12 }
+                },
+                legend: {
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 20,
+                        font: { size: 12 }
                     }
+                }
+            },
+            elements: {
+                line: {
+                    tension: 0.1  // Smooth lines
+                },
+                point: {
+                    radius: 0  // Ensure no points are shown
                 }
             }
         }
     };
 
-    // Destroy old chart if it exists
     if (this.measurementCharts[measurementType]) {
         this.measurementCharts[measurementType].destroy();
     }
-
-    // Create new chart
-    this.measurementCharts[measurementType] = new Chart(ctx, config);
+    this.measurementCharts[measurementType] = new Chart(canvas, config);
 }
   clearCharts(): void {
     // Destroy reading charts
