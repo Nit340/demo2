@@ -49,6 +49,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   destroy$: Subject<boolean> = new Subject<boolean>(); // One chart per measurement type
  private readingCharts: { [key: string]: Chart } = {};
   private measurementCharts: { [key: string]: Chart } = {};
+private fetchInterval: any;
 
   // Asset Search Properties
   assetSearchTerm: string = '';
@@ -290,6 +291,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.destroy$.next(true);
     this.destroy$.unsubscribe();
    this.clearCharts();
+   if (this.fetchInterval) {
+    clearInterval(this.fetchInterval);
+  }
+  this.destroy$.next();
+  this.destroy$.complete();
   }
    // Updated Asset Search Methods
   searchAsset(): void {
@@ -298,25 +304,52 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.fetchAssetReadings();
     }
   }
- fetchAssetReadings(): void {
-    this.assetLoading = true;
-    this.assetError = '';
-    const MAX_LIMIT = 100000;
-    
-    this.assetdataService.getAssetReadings(this.selectedAsset, MAX_LIMIT)
+fetchAssetReadings(): void {
+  if (this.fetchInterval) {
+    clearInterval(this.fetchInterval);
+  }
+
+  this.assetLoading = true;
+  this.assetError = '';
+  
+  // Initial fetch
+  this.fetchReadings();
+  
+  // Set up interval for periodic fetching (every minute)
+  this.fetchInterval = setInterval(() => {
+    this.fetchReadings();
+  }, 60000); // 60,000 ms = 1 minute
+}
+
+private fetchReadings(): void {
+  // Start with a reasonable initial limit
+  let limit = 1000;
+  
+  const fetchWithLimit = (currentLimit: number) => {
+    this.assetdataService.getAssetReadings(this.selectedAsset, currentLimit)
       .pipe(takeUntil(this.destroy$))
       .subscribe(
         (data: any) => {
-          this.assetReadings = Array.isArray(data) ? data : [data];
-          this.createMeasurementCharts();
-          this.assetLoading = false;
+          const readings = Array.isArray(data) ? data : [data];
+          if (readings.length === currentLimit) {
+            // If we got exactly the limit, there might be more data
+            fetchWithLimit(currentLimit * 2);
+          } else {
+            this.assetReadings = readings;
+            this.createMeasurementCharts();
+            this.assetLoading = false;
+          }
         },
         (error) => {
           this.assetError = error.message || 'Failed to fetch all readings';
           this.assetLoading = false;
         }
       );
-  }
+  };
+  
+  fetchWithLimit(limit);
+}
+
 
   createMeasurementCharts(): void {
     // Destroy existing charts first
@@ -346,9 +379,9 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
     const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
     if (!canvas) return;
 
-    // Set canvas dimensions with increased height
+    // Set canvas dimensions
     canvas.width = 1200;
-    canvas.height = 700;  // Increased from 500 to 700
+    canvas.height = 700;
 
     // Color generation function
     const getColor = (index: number, total: number, alpha = 1) => {
@@ -356,50 +389,75 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
         return `hsla(${hue}, 70%, 50%, ${alpha})`;
     };
 
-    // Check if readings are text-based or numerical
-    const firstReading = this.assetReadings[0]?.reading[measurementType];
-    const isTextData = typeof firstReading === 'string' && isNaN(Number(firstReading));
+    // Get today's date in IST
+    const todayIST = new Date();
+    todayIST.setHours(todayIST.getHours() + 5);
+    todayIST.setMinutes(todayIST.getMinutes() + 30);
+    const todayDateKey = todayIST.toLocaleDateString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
 
-    // Convert to IST and group by date
-    const dateMap = new Map<string, {dates: Date[], values: any[]}>();
-   
-    this.assetReadings.forEach(r => {
-        const date = new Date(r.timestamp);
-        // IST conversion (UTC+5:30)
-        date.setHours(date.getHours() + 5);
-        date.setMinutes(date.getMinutes() + 30);
-       
-        const dateKey = date.toLocaleDateString('en-IN', {
+    // Filter readings for today only
+    const todayReadings = this.assetReadings.filter(r => {
+        const readingDate = new Date(r.timestamp);
+        readingDate.setHours(readingDate.getHours() + 5);
+        readingDate.setMinutes(readingDate.getMinutes() + 30);
+        const readingDateKey = readingDate.toLocaleDateString('en-IN', {
             timeZone: 'Asia/Kolkata',
             day: '2-digit',
             month: '2-digit',
             year: 'numeric'
         });
-       
-        if (!dateMap.has(dateKey)) {
-            dateMap.set(dateKey, {dates: [], values: []});
-        }
-        dateMap.get(dateKey)!.dates.push(date);
-        dateMap.get(dateKey)!.values.push(r.reading[measurementType]);
+        return readingDateKey === todayDateKey;
     });
 
-    // For text data (statuses) - use stacked bar chart
+    // Check if readings are text-based or numerical
+    const firstReading = todayReadings[0]?.reading[measurementType];
+    const isTextData = typeof firstReading === 'string' && isNaN(Number(firstReading));
+
+    // Group today's readings by time
+    const timeMap = new Map<string, {times: Date[], values: any[]}>();
+   
+    todayReadings.forEach(r => {
+        const date = new Date(r.timestamp);
+        // IST conversion (UTC+5:30)
+        date.setHours(date.getHours() + 5);
+        date.setMinutes(date.getMinutes() + 30);
+       
+        const timeKey = date.toLocaleTimeString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+       
+        if (!timeMap.has(timeKey)) {
+            timeMap.set(timeKey, {times: [], values: []});
+        }
+        timeMap.get(timeKey)!.times.push(date);
+        timeMap.get(timeKey)!.values.push(r.reading[measurementType]);
+    });
+
+    // For text data (statuses) - use bar chart (not stacked since it's single day)
     if (isTextData) {
         const statusCountMap = new Map<string, number[]>();
-        const allStatuses = [...new Set(this.assetReadings.map(r => r.reading[measurementType]))];
+        const allStatuses = [...new Set(todayReadings.map(r => r.reading[measurementType]))];
 
         allStatuses.forEach(status => {
-            statusCountMap.set(status, Array(dateMap.size).fill(0));
+            statusCountMap.set(status, Array(timeMap.size).fill(0));
         });
 
-        let dateIndex = 0;
-        dateMap.forEach((data, dateKey) => {
+        let timeIndex = 0;
+        timeMap.forEach((data, timeKey) => {
             data.values.forEach(value => {
                 const currentCount = statusCountMap.get(value) || [];
-                currentCount[dateIndex] = (currentCount[dateIndex] || 0) + 1;
+                currentCount[timeIndex] = (currentCount[timeIndex] || 0) + 1;
                 statusCountMap.set(value, currentCount);
             });
-            dateIndex++;
+            timeIndex++;
         });
 
         const datasets = Array.from(statusCountMap.entries()).map(([status, counts], i) => {
@@ -409,15 +467,14 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
                 data: counts,
                 backgroundColor: color,
                 borderColor: color,
-                borderWidth: 1,
-                stack: 'stack1'
+                borderWidth: 1
             };
         });
 
         const config: ChartConfiguration<'bar'> = {
             type: 'bar',
             data: {
-                labels: Array.from(dateMap.keys()),
+                labels: Array.from(timeMap.keys()),
                 datasets: datasets
             },
             options: {
@@ -425,14 +482,12 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        stacked: true,
                         title: {
                             display: true,
-                            text: 'Date (IST)'
+                            text: `Time Today (${todayDateKey})`
                         }
                     },
                     y: {
-                        stacked: true,
                         title: {
                             display: true,
                             text: 'Count'
@@ -443,7 +498,7 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
                 plugins: {
                     title: {
                         display: true,
-                        text: `${measurementType} Status Distribution (IST)`,
+                        text: `${measurementType} Status Today (IST)`,
                         font: { size: 16 }
                     },
                     tooltip: {
@@ -472,37 +527,35 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
         return;
     }
 
-    // Numerical data - line chart with points removed
-    const datasets = Array.from(dateMap.entries()).map(([dateKey, data], i) => {
-        const color = getColor(i, dateMap.size);
-        return {
-            label: dateKey,
-            data: data.values,
-            borderColor: color,
-            backgroundColor: getColor(i, dateMap.size, 0.2),
-            borderWidth: 2,
-            tension: 0.1,
-            pointRadius: 0,  // Removed points by setting radius to 0
-            pointHoverRadius: 0,  // Also remove hover points
-            fill: true
-        };
-    });
+    // Numerical data - line chart for today's data
+    const dataset = {
+        label: todayDateKey,
+        data: todayReadings.map(r => r.reading[measurementType]),
+        borderColor: getColor(0, 1), // Single color for today's data
+        backgroundColor: getColor(0, 1, 0.2),
+        borderWidth: 2,
+        tension: 0.1,
+        pointRadius: 0,
+        fill: true
+    };
 
-    const allDates = Array.from(dateMap.values())[0]?.dates || [];
-    const labels = allDates.map(d => 
-        d.toLocaleTimeString('en-IN', {
+    const labels = todayReadings.map(r => {
+        const date = new Date(r.timestamp);
+        date.setHours(date.getHours() + 5);
+        date.setMinutes(date.getMinutes() + 30);
+        return date.toLocaleTimeString('en-IN', {
             timeZone: 'Asia/Kolkata',
             hour: '2-digit',
             minute: '2-digit',
             hour12: true
-        }).replace(' ', '')
-    );
+        }).replace(' ', '');
+    });
 
     const config: ChartConfiguration<'line'> = {
         type: 'line',
         data: {
             labels: labels,
-            datasets: datasets
+            datasets: [dataset]
         },
         options: {
             responsive: true,
@@ -519,8 +572,7 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
                 x: {
                     title: {
                         display: true,
-                        text: 'Time of Day (IST)',
-                        padding: {top: 10}
+                        text: `Time Today (${todayDateKey})`
                     },
                     ticks: {
                         autoSkip: false,
@@ -553,7 +605,7 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
             plugins: {
                 title: {
                     display: true,
-                    text: `Daily ${measurementType} Patterns (IST)`,
+                    text: `Today's ${measurementType} Pattern (IST)`,
                     padding: { bottom: 20 },
                     font: { size: 16 }
                 },
@@ -565,22 +617,14 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
                     displayColors: true,
                     padding: 10,
                     bodyFont: { size: 12 }
-                },
-                legend: {
-                    labels: {
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        padding: 20,
-                        font: { size: 12 }
-                    }
                 }
             },
             elements: {
                 line: {
-                    tension: 0.1  // Smooth lines
+                    tension: 0.1
                 },
                 point: {
-                    radius: 0  // Ensure no points are shown
+                    radius: 0
                 }
             }
         }
@@ -592,33 +636,46 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
     this.measurementCharts[measurementType] = new Chart(canvas, config);
 }
   clearCharts(): void {
-    // Destroy reading charts
-    Object.values(this.readingCharts).forEach(chart => {
-      if (chart && typeof chart.destroy === 'function') {
-        chart.destroy();
-      }
-    });
-    this.readingCharts = {};
-
-    // Destroy measurement charts
-    Object.values(this.measurementCharts).forEach(chart => {
-      if (chart && typeof chart.destroy === 'function') {
-        chart.destroy();
-      }
-    });
-    this.measurementCharts = {};
+  // Clear the fetch interval
+  if (this.fetchInterval) {
+    clearInterval(this.fetchInterval);
+    this.fetchInterval = null;
   }
 
+  // Destroy reading charts
+  Object.values(this.readingCharts).forEach(chart => {
+    if (chart && typeof chart.destroy === 'function') {
+      chart.destroy();
+    }
+  });
+  this.readingCharts = {};
+
+  // Destroy measurement charts
+  Object.values(this.measurementCharts).forEach(chart => {
+    if (chart && typeof chart.destroy === 'function') {
+      chart.destroy();
+    }
+  });
+  this.measurementCharts = {};
+}
 
 
   clearAssetSearch(): void {
-    this.selectedAsset = '';
-    this.assetSearchTerm = '';
-    this.assetReadings = [];
-    this.assetError = '';
-     // Clean up charts
-    Object.values(this.readingCharts).forEach(chart => chart.destroy());
-    this.readingCharts = {};
+  // Clear the fetch interval
+  if (this.fetchInterval) {
+    clearInterval(this.fetchInterval);
+    this.fetchInterval = null;
   }
+
+  this.selectedAsset = '';
+  this.assetSearchTerm = '';
+  this.assetReadings = [];
+  this.assetError = '';
+  
+  // Clean up charts
+  Object.values(this.readingCharts).forEach(chart => chart.destroy());
+  this.readingCharts = {};
+}
+
     
 }
