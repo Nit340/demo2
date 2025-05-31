@@ -63,20 +63,26 @@
   </div>
 
   <div *ngIf="assetReadings.length > 0" class="asset-readings">
-    <div class="readings-summary">
-      Found {{ assetReadings.length }} readings with 
-      {{ getMeasurementTypes().length }} measurement types
+  <div class="readings-summary">
+    Found {{ assetReadings.length }} readings with 
+    {{ getMeasurementTypes().length }} measurement types
+    
+    <!-- Add date picker here -->
+    <div class="date-filter">
+      <label for="chart-date">Select Date:</label>
+      <input type="date" id="chart-date" [(ngModel)]="selectedDate" (change)="onDateChange()">
     </div>
+  </div>
 
-    <div class="measurement-charts-container">
-      <div *ngFor="let type of getMeasurementTypes()" class="measurement-chart">
-        <h4>{{ type }} over Time</h4>
-        <div class="chart-container">
-          <canvas [id]="'chart-' + type"></canvas>
-        </div>
+  <div class="measurement-charts-container">
+    <div *ngFor="let type of getMeasurementTypes()" class="measurement-chart">
+      <h4>{{ type }} over Time</h4>
+      <div class="chart-container">
+        <canvas [id]="'chart-' + type"></canvas>
       </div>
     </div>
   </div>
+</div>
 </div>
   <!-- Graphs Grid -->
   <div class="graphs-grid">

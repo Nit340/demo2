@@ -1,0 +1,179 @@
+// Add this method to your AssetsService class
+public getAssetReadingsByTime(assetCode: string, startDate: Date, endDate: Date): Observable<any> {
+  let params = new HttpParams();
+  params = params.append('start', startDate.toISOString());
+  params = params.append('end', endDate.toISOString());
+  return this.http.get(`${this.GET_ASSET}/${encodeURIComponent(assetCode)}`, { params }).pipe(
+    map(response => response),
+    catchError(error => throwError(error)));
+}
+****************************************************************************************************************************
+// Add these methods to your AssetsComponent class
+getAssetReadings(assetCode, recordCount, timeRange?: { period: 'hour' | 'day' | 'week' | 'month', value: number }) {
+  this.assetReadings = [];
+  const fileName = assetCode + '-readings';
+  if (recordCount === 0 && !timeRange) {
+    this.alertService.error('No reading to export.', true);
+    return;
+  }
+  this.alertService.activityMessage('Exporting readings to ' + fileName, true);
+  
+  // If time range is specified, use it instead of record count
+  if (timeRange) {
+    this.exportByTimeRange(assetCode, timeRange, fileName);
+    return;
+  }
+
+  // Original record count based export
+  this.exportByRecordCount(assetCode, recordCount, fileName);
+}
+
+private exportByTimeRange(assetCode: string, timeRange: { period: 'hour' | 'day' | 'week' | 'month', value: number }, fileName: string) {
+  const endDate = new Date();
+  let startDate = new Date();
+  
+  switch (timeRange.period) {
+    case 'hour':
+      startDate.setHours(endDate.getHours() - timeRange.value);
+      break;
+    case 'day':
+      startDate.setDate(endDate.getDate() - timeRange.value);
+      break;
+    case 'week':
+      startDate.setDate(endDate.getDate() - (timeRange.value * 7));
+      break;
+    case 'month':
+      startDate.setMonth(endDate.getMonth() - timeRange.value);
+      break;
+  }
+  
+  this.assetService.getAssetReadingsByTime(assetCode, startDate, endDate)
+    .pipe(takeUntil(this.destroy$))
+    .subscribe(
+      (data: any[]) => {
+        this.assetReadings = data.map(r => r);
+        this.generateCsvService.download(this.assetReadings, fileName, 'asset');
+      },
+      error => {
+        console.log('error in response', error);
+        this.alertService.error('Failed to export readings: ' + error.statusText);
+      });
+}
+
+private exportByRecordCount(assetCode: string, recordCount: number, fileName: string) {
+  let limit = recordCount;
+  let offset = 0;
+  let isLastRequest = false;
+  
+  if (recordCount > this.MAX_RANGE) {
+    this.exportInChunks(assetCode, recordCount, fileName);
+  } else {
+    this.exportReadings(assetCode, limit, offset, true, fileName);
+  }
+}
+
+private exportInChunks(assetCode: string, recordCount: number, fileName: string) {
+  const chunkCount = Math.ceil(recordCount / this.MAX_RANGE);
+  const lastChunkLimit = (recordCount % this.MAX_RANGE) || this.MAX_RANGE;
+  
+  for (let j = 0; j < chunkCount; j++) {
+    const offset = (this.MAX_RANGE * j);
+    const limit = j === (chunkCount - 1) ? lastChunkLimit : this.MAX_RANGE;
+    const isLastRequest = j === (chunkCount - 1);
+    
+    this.exportReadings(assetCode, limit, offset, isLastRequest, fileName);
+  }
+}
+
+exportReadings(assetCode: any, limit: number, offset: number, lastRequest: boolean, fileName: string) {
+  this.assetService.getAssetReadings(encodeURIComponent(assetCode), limit, offset)
+    .pipe(takeUntil(this.destroy$))
+    .subscribe(
+      (data: any[]) => {
+        data = data.map(r => r);
+        this.assetReadings = this.assetReadings.concat(data);
+        if (lastRequest === true) {
+          this.generateCsvService.download(this.assetReadings, fileName, 'asset');
+        }
+      },
+      error => {
+        console.log('error in response', error);
+        this.alertService.error('Failed to export readings: ' + error.statusText);
+      });
+}
+****************************************************************************************************************************************
+<td>
+  <div class="dropdown is-hoverable is-right">
+    <div class="dropdown-trigger">
+      <a class="is-pulled-right" aria-haspopup="true" aria-controls="dropdown-menu">
+        <span class="icon is-small tooltip has-tooltip-right has-tooltip-arrow" data-tooltip="Export readings">
+          <i class="fa fa-sm fa-download" aria-hidden="true"></i>
+        </span>
+      </a>
+    </div>
+    <div class="dropdown-menu" id="dropdown-menu" role="menu">
+      <div class="dropdown-content">
+        <a class="dropdown-item" (click)="getAssetReadings(asset.assetCode, asset.count)">
+          Export All
+        </a>
+        <hr class="dropdown-divider">
+        <a class="dropdown-item" (click)="getAssetReadings(asset.assetCode, 0, {period: 'hour', value: 1})">
+          Last Hour
+        </a>
+        <a class="dropdown-item" (click)="getAssetReadings(asset.assetCode, 0, {period: 'day', value: 1})">
+          Last 24 Hours
+        </a>
+        <a class="dropdown-item" (click)="getAssetReadings(asset.assetCode, 0, {period: 'week', value: 1})">
+          Last Week
+        </a>
+        <a class="dropdown-item" (click)="getAssetReadings(asset.assetCode, 0, {period: 'month', value: 1})">
+          Last Month
+        </a>
+      </div>
+    </div>
+  </div>
+</td>
+************************************************************************************************************************************
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  background-color: #f9f9f9;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+  border-radius: 4px;
+}
+
+.dropdown-content {
+  display: block;
+}
+
+.dropdown-item {
+  color: #4a4a4a;
+  padding: 0.375rem 1rem;
+  text-decoration: none;
+  display: block;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background-color: #f5f5f5;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #dbdbdb;
+  border: none;
+  margin: 0.5rem 0;
+}
+
+.dropdown.is-active .dropdown-menu {
+  display: block;
+}

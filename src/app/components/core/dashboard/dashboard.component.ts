@@ -63,6 +63,15 @@ private fetchInterval: any;
     'time-dropdown': false,
     'graph-key-dropdown': false
   };
+  selectedDate: string = new Date().toISOString().split('T')[0]; // Default to today
+
+// Add this method to handle date changes
+onDateChange(): void {
+  this.getMeasurementTypes().forEach(type => {
+    this.createChartForMeasurement(`chart-${type}`, type);
+  });
+}
+
 
   constructor(
     private statisticsService: StatisticsService,
@@ -389,50 +398,47 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
         return `hsla(${hue}, 70%, 50%, ${alpha})`;
     };
 
-    // Get today's date in IST
-    const todayIST = new Date();
-    todayIST.setHours(todayIST.getHours() + 5);
-    todayIST.setMinutes(todayIST.getMinutes() + 30);
-    const todayDateKey = todayIST.toLocaleDateString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
-
-    // Filter readings for today only
-    const todayReadings = this.assetReadings.filter(r => {
-        const readingDate = new Date(r.timestamp);
-        readingDate.setHours(readingDate.getHours() + 5);
-        readingDate.setMinutes(readingDate.getMinutes() + 30);
-        const readingDateKey = readingDate.toLocaleDateString('en-IN', {
-            timeZone: 'Asia/Kolkata',
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-        return readingDateKey === todayDateKey;
-    });
-
-    // Check if readings are text-based or numerical
-    const firstReading = todayReadings[0]?.reading[measurementType];
-    const isTextData = typeof firstReading === 'string' && isNaN(Number(firstReading));
-
-    // Group today's readings by time
-    const timeMap = new Map<string, {times: Date[], values: any[]}>();
-   
-    todayReadings.forEach(r => {
-        const date = new Date(r.timestamp);
-        // IST conversion (UTC+5:30)
-        date.setHours(date.getHours() + 5);
-        date.setMinutes(date.getMinutes() + 30);
-       
-        const timeKey = date.toLocaleTimeString('en-IN', {
-            timeZone: 'Asia/Kolkata',
+    // Timezone helpers
+    const isIST = (timestamp: string) => timestamp.includes('+05:30') || timestamp.endsWith('IST');
+    const utcToIST = (date: Date) => new Date(date.getTime() + (5.5 * 60 * 60 * 1000));
+    const formatISTTime = (date: Date) => {
+        return date.toLocaleTimeString('en-IN', {
             hour: '2-digit',
             minute: '2-digit',
-            hour12: false
+            hour12: true
         });
+    };
+
+    // Filter readings for selected date in IST
+    const selectedDateIST = new Date(this.selectedDate);
+    selectedDateIST.setHours(0, 0, 0, 0);
+
+    const filteredReadings = this.assetReadings.filter(r => {
+        let readingDate = new Date(r.timestamp);
+        if (!isIST(r.timestamp)) {
+            readingDate = utcToIST(readingDate);
+        }
+        return readingDate.toDateString() === selectedDateIST.toDateString();
+    });
+
+    if (filteredReadings.length === 0) {
+        this.showNoDataMessage(canvas, measurementType, this.selectedDate);
+        return;
+    }
+
+    // Check if readings are text-based or numerical
+    const firstReading = filteredReadings[0]?.reading[measurementType];
+    const isTextData = typeof firstReading === 'string' && isNaN(Number(firstReading));
+
+    // Group readings by time in IST
+    const timeMap = new Map<string, {times: Date[], values: any[]}>();
+   
+    filteredReadings.forEach(r => {
+        let date = new Date(r.timestamp);
+        if (!isIST(r.timestamp)) {
+            date = utcToIST(date);
+        }
+        const timeKey = formatISTTime(date);
        
         if (!timeMap.has(timeKey)) {
             timeMap.set(timeKey, {times: [], values: []});
@@ -441,10 +447,10 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
         timeMap.get(timeKey)!.values.push(r.reading[measurementType]);
     });
 
-    // For text data (statuses) - use bar chart (not stacked since it's single day)
+    // For text data (statuses)
     if (isTextData) {
         const statusCountMap = new Map<string, number[]>();
-        const allStatuses = [...new Set(todayReadings.map(r => r.reading[measurementType]))];
+        const allStatuses = [...new Set(filteredReadings.map(r => r.reading[measurementType]))];
 
         allStatuses.forEach(status => {
             statusCountMap.set(status, Array(timeMap.size).fill(0));
@@ -484,7 +490,7 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
                     x: {
                         title: {
                             display: true,
-                            text: `Time Today (${todayDateKey})`
+                            text: `Time (IST - ${this.selectedDate})`
                         }
                     },
                     y: {
@@ -498,13 +504,18 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
                 plugins: {
                     title: {
                         display: true,
-                        text: `${measurementType} Status Today (IST)`,
+                        text: `${measurementType} Status`,
                         font: { size: 16 }
                     },
                     tooltip: {
                         callbacks: {
                             label: (context) => {
                                 return `${context.dataset.label}: ${context.parsed.y}`;
+                            },
+                            title: (items) => {
+                                if (items.length === 0) return '';
+                                const timeLabel = items[0].label;
+                                return `Time (IST): ${timeLabel}`;
                             }
                         }
                     },
@@ -527,11 +538,11 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
         return;
     }
 
-    // Numerical data - line chart for today's data
+    // Numerical data - line chart
     const dataset = {
-        label: todayDateKey,
-        data: todayReadings.map(r => r.reading[measurementType]),
-        borderColor: getColor(0, 1), // Single color for today's data
+        label: this.selectedDate,
+        data: filteredReadings.map(r => r.reading[measurementType]),
+        borderColor: getColor(0, 1),
         backgroundColor: getColor(0, 1, 0.2),
         borderWidth: 2,
         tension: 0.1,
@@ -539,16 +550,12 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
         fill: true
     };
 
-    const labels = todayReadings.map(r => {
-        const date = new Date(r.timestamp);
-        date.setHours(date.getHours() + 5);
-        date.setMinutes(date.getMinutes() + 30);
-        return date.toLocaleTimeString('en-IN', {
-            timeZone: 'Asia/Kolkata',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        }).replace(' ', '');
+    const labels = filteredReadings.map(r => {
+        let date = new Date(r.timestamp);
+        if (!isIST(r.timestamp)) {
+            date = utcToIST(date);
+        }
+        return formatISTTime(date);
     });
 
     const config: ChartConfiguration<'line'> = {
@@ -572,7 +579,7 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
                 x: {
                     title: {
                         display: true,
-                        text: `Time Today (${todayDateKey})`
+                        text: `Time (IST - ${this.selectedDate})`
                     },
                     ticks: {
                         autoSkip: false,
@@ -605,14 +612,22 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
             plugins: {
                 title: {
                     display: true,
-                    text: `Today's ${measurementType} Pattern (IST)`,
+                    text: `${measurementType} Pattern`,
                     padding: { bottom: 20 },
                     font: { size: 16 }
                 },
                 tooltip: {
                     callbacks: {
                         label: (context) => `${context.dataset.label}: ${context.parsed.y}`,
-                        title: (items) => items.length ? `Time: ${items[0].label}` : ''
+                        title: (items) => {
+                            if (items.length === 0) return '';
+                            const rawTimestamp = filteredReadings[items[0].dataIndex].timestamp;
+                            let date = new Date(rawTimestamp);
+                            if (!isIST(rawTimestamp)) {
+                                date = utcToIST(date);
+                            }
+                            return `Time (IST): ${formatISTTime(date)}`;
+                        }
                     },
                     displayColors: true,
                     padding: 10,
@@ -635,6 +650,22 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
     }
     this.measurementCharts[measurementType] = new Chart(canvas, config);
 }
+private showNoDataMessage(canvas: HTMLCanvasElement, measurementType: string, date: string): void {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#666';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`No ${measurementType} data available for ${date}`, canvas.width / 2, canvas.height / 2);
+    
+    if (this.measurementCharts[measurementType]) {
+        this.measurementCharts[measurementType].destroy();
+        delete this.measurementCharts[measurementType];
+    }
+}
+
   clearCharts(): void {
   // Clear the fetch interval
   if (this.fetchInterval) {

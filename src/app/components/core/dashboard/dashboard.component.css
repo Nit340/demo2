@@ -30,7 +30,7 @@
   position: relative;
   display: inline-block;
   min-width: 180px;
-}
+} 
 
 .dropdown-button {
   padding: 10px 20px;
@@ -507,4 +507,20 @@
   position: relative;
   height: 300px;
   width: 100%;
+}
+.date-filter {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.date-filter label {
+  font-weight: bold;
+}
+
+.date-filter input {
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }

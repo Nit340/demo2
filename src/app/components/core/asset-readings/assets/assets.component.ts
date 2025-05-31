@@ -87,59 +87,140 @@ export class AssetsComponent implements OnInit, OnDestroy {
         });
   }
 
-  getAssetReadings(assetCode, recordCount) {
-    this.assetReadings = [];
-    const fileName = assetCode + '-readings';
-    if (recordCount === 0) {
-      this.alertService.error('No reading to export.', true);
-      return;
-    }
-    this.alertService.activityMessage('Exporting readings to ' + fileName, true);
-    let limit = recordCount;
-    let offset = 0;
-    let isLastRequest = false;
-    if (recordCount > this.MAX_RANGE) {
-      let chunkCount;
-      let lastChunkLimit;
-      limit = this.MAX_RANGE;
-      chunkCount = Math.ceil(recordCount / this.MAX_RANGE);
-      lastChunkLimit = (recordCount % this.MAX_RANGE);
-      if (lastChunkLimit === 0) {
-        lastChunkLimit = this.MAX_RANGE;
-      }
-      for (let j = 0; j < chunkCount; j++) {
-        if (j !== 0) {
-          offset = (this.MAX_RANGE * j);
-        }
-        if (j === (chunkCount - 1)) {
-          limit = lastChunkLimit;
-          isLastRequest = true;
-        }
-        this.exportReadings(assetCode, limit, offset, isLastRequest, fileName);
-      }
-    } else {
-      this.exportReadings(assetCode, limit, offset, true, fileName);
-    }
+ getAssetReadings(assetCode: string, recordCount: number, startDate?: Date, endDate?: Date) {
+  this.assetReadings = [];
+  const fileName = assetCode + '-readings';
+  
+  if (recordCount === 0) {
+    this.alertService.error('No reading to export.', true);
+    return;
   }
 
-  exportReadings(assetCode: any, limit: number, offset: number, lastRequest: boolean, fileName: string) {
-    this.assetService.getAssetReadings(encodeURIComponent(assetCode), limit, offset)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(
-        (data: any[]) => {
-          data = data.map(r => {
-            return r;
-          });
-          this.assetReadings = this.assetReadings.concat(data);
-          if (lastRequest === true) {
-            this.generateCsvService.download(this.assetReadings, fileName, 'asset');
+  this.alertService.activityMessage('Exporting readings to ' + fileName, true);
+  
+  let limit = recordCount;
+  let offset = 0;
+  let isLastRequest = false;
+
+  if (recordCount > this.MAX_RANGE) {
+    let chunkCount;
+    let lastChunkLimit;
+    limit = this.MAX_RANGE;
+    chunkCount = Math.ceil(recordCount / this.MAX_RANGE);
+    lastChunkLimit = (recordCount % this.MAX_RANGE);
+    
+    if (lastChunkLimit === 0) {
+      lastChunkLimit = this.MAX_RANGE;
+    }
+    
+    for (let j = 0; j < chunkCount; j++) {
+      if (j !== 0) {
+        offset = (this.MAX_RANGE * j);
+      }
+      if (j === (chunkCount - 1)) {
+        limit = lastChunkLimit;
+        isLastRequest = true;
+      }
+      this.exportReadings(assetCode, limit, offset, isLastRequest, fileName, startDate, endDate);
+    }
+  } else {
+    this.exportReadings(assetCode, limit, offset, true, fileName, startDate, endDate);
+  }
+}
+
+exportReadings(
+  assetCode: any,
+  limit: number,
+  offset: number,
+  lastRequest: boolean,
+  fileName: string,
+  startDate?: Date,
+  endDate?: Date
+) {
+  this.assetService.getAssetReadings(encodeURIComponent(assetCode), limit, offset)
+    .pipe(takeUntil(this.destroy$))
+    .subscribe(
+      (data: any[]) => {
+        // Keep the original structure {reading: {...}, timestamp}
+        this.assetReadings = this.assetReadings.concat(data);
+
+        if (lastRequest === true) {
+          let filteredReadings = this.assetReadings;
+
+          // Apply date filtering if dates are provided
+          if (startDate || endDate) {
+            filteredReadings = this.assetReadings.filter(item => {
+              if (!item.timestamp) return false;
+              
+              const timestampStr = item.timestamp.split(' ')[0];
+              const readingDate = new Date(timestampStr);
+              const filterStart = startDate ? new Date(startDate.toISOString().split('T')[0]) : null;
+              const filterEnd = endDate ? new Date(endDate.toISOString().split('T')[0]) : null;
+
+              return (
+                (!filterStart || readingDate >= filterStart) &&
+                (!filterEnd || readingDate <= filterEnd)
+              );
+            });
           }
-        },
-        error => {
-          console.log('error in response', error);
-        });
+
+          console.log('Final data to export:', filteredReadings);
+          
+          if (filteredReadings.length === 0) {
+            this.alertService.warning('No data matches the selected date range');
+            return;
+          }
+
+          this.generateCsvService.download(filteredReadings, fileName, 'asset');
+          this.assetReadings = [];
+        }
+      },
+      error => {
+        console.error('Error fetching asset readings:', error);
+        this.alertService.error('Failed to export readings');
+      }
+    );
+}
+  // Add these variables
+showDateFilter: string | null = null; // Tracks which asset's filter is open
+startDate?: Date;
+endDate?: Date;
+
+// Toggle date filter menu
+toggleDateFilter(assetCode: string) {
+  this.showDateFilter = this.showDateFilter === assetCode ? null : assetCode;
+}
+
+// Add these temporary variables
+tempStartDate: string;
+tempEndDate: string;
+
+exportWithDateFilter(assetCode: string, count: number) {
+  // Validate dates
+  if (!this.tempStartDate || !this.tempEndDate) {
+    this.alertService.error('Please select both start and end dates');
+    return;
   }
 
+  // Convert to Date objects
+  const startDate = new Date(this.tempStartDate);
+  const endDate = new Date(this.tempEndDate);
+
+  // Validate dates
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    this.alertService.error('Invalid date format');
+    return;
+  }
+
+  if (startDate > endDate) {
+    this.alertService.error('Start date cannot be after end date');
+    return;
+  }
+
+  // Reset and export
+  this.assetReadings = []; // Clear previous data
+  this.getAssetReadings(assetCode, count, startDate, endDate);
+}
   purgeAssetData(assetCode) {
     /** request started */
     this.ngProgress.start();
@@ -238,4 +319,5 @@ export class AssetsComponent implements OnInit, OnDestroy {
     this.destroy$.next(true);
     this.destroy$.unsubscribe();
   }
+
 }

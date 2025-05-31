@@ -1,0 +1,271 @@
+// Add these properties to your component class
+selectedDate: string = new Date().toISOString().split('T')[0]; // Default to today
+measurementCharts: { [key: string]: Chart } = {};
+
+// Add this method to handle date changes
+onDateChange(): void {
+  this.getMeasurementTypes().forEach(type => {
+    this.createChartForMeasurement(`chart-${type}`, type);
+  });
+}
+
+// Modify your existing createChartForMeasurement method to use selectedDate
+createChartForMeasurement(canvasId: string, measurementType: string): void {
+    const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+    if (!canvas) return;
+
+    // Set canvas dimensions
+    canvas.width = 1200;
+    canvas.height = 700;
+
+    // Color generation function
+    const getColor = (index: number, total: number, alpha = 1) => {
+        const hue = (index * 360 / total) % 360;
+        return `hsla(${hue}, 70%, 50%, ${alpha})`;
+    };
+
+    // Convert selected date to IST format for comparison
+    const selectedDateIST = new Date(this.selectedDate);
+    selectedDateIST.setHours(selectedDateIST.getHours() + 5);
+    selectedDateIST.setMinutes(selectedDateIST.getMinutes() + 30);
+    const selectedDateKey = selectedDateIST.toLocaleDateString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+
+    // Filter readings for selected date only
+    const filteredReadings = this.assetReadings.filter(r => {
+        const readingDate = new Date(r.timestamp);
+        readingDate.setHours(readingDate.getHours() + 5);
+        readingDate.setMinutes(readingDate.getMinutes() + 30);
+        const readingDateKey = readingDate.toLocaleDateString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+        return readingDateKey === selectedDateKey;
+    });
+
+    if (filteredReadings.length === 0) {
+        // No data for selected date - show empty chart or message
+        this.showNoDataMessage(canvas, measurementType, selectedDateKey);
+        return;
+    }
+
+    // Check if readings are text-based or numerical
+    const firstReading = filteredReadings[0]?.reading[measurementType];
+    const isTextData = typeof firstReading === 'string' && isNaN(Number(firstReading));
+
+    // Rest of your existing code, but replace todayReadings with filteredReadings
+    // and todayDateKey with selectedDateKey
+    // ... [keep all the rest of your existing code, just change the variable names]
+}
+
+// Add this helper method to show no data message
+private showNoDataMessage(canvas: HTMLCanvasElement, measurementType: string, dateKey: string): void {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw message
+    ctx.fillStyle = '#666';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`No ${measurementType} data available for ${dateKey}`, canvas.width / 2, canvas.height / 2);
+    
+    // Destroy any existing chart for this measurement type
+    if (this.measurementCharts[measurementType]) {
+        this.measurementCharts[measurementType].destroy();
+        delete this.measurementCharts[measurementType];
+    }
+}
+****************************************************************************************************************************
+<div class="dashboard-container">
+  <!-- Statistics Section -->
+  <div class="statistics-section">
+    <!-- Your existing statistics graphs display -->
+    <div *ngFor="let graph of graphsToShow" class="graph-container">
+      <h4>{{graph.key}}</h4>
+      <div class="chart-container">
+        <canvas [id]="'stats-chart-' + graph.key"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Asset Search Section -->
+  <div class="asset-section">
+    <div class="asset-search">
+      <input type="text" [(ngModel)]="assetSearchTerm" placeholder="Search asset...">
+      <button (click)="searchAsset()">Search</button>
+      <button (click)="clearAssetSearch()">Clear</button>
+      <label>Date: <input type="date" [(ngModel)]="selectedDate" (change)="onDateChange()"></label>
+    </div>
+
+    <div *ngIf="assetReadings.length > 0" class="asset-readings">
+      <div class="readings-summary">
+        Found {{ assetReadings.length }} readings with 
+        {{ getMeasurementTypes().length }} measurement types
+      </div>
+
+      <div class="measurement-charts-container">
+        <div *ngFor="let type of getMeasurementTypes()" class="measurement-chart">
+          <h4>{{ type }} over Time</h4>
+          <div class="chart-container">
+            <canvas [id]="'chart-' + type"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+**********************************************************************************************************
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.statistics-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(600px, 1fr));
+    gap: 1rem;
+}
+
+.asset-section {
+    margin-top: 2rem;
+    border-top: 1px solid #eee;
+    padding-top: 2rem;
+}
+
+.asset-search {
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.measurement-charts-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(600px, 1fr));
+    gap: 1rem;
+}
+
+.chart-container {
+    position: relative;
+    height: 400px;
+    width: 100%;
+}
+******************************************************************************************************************
+// In your component class, modify these parts:
+
+private readingCharts: { [key: string]: Chart } = {};
+private measurementCharts: { [key: string]: Chart } = {};
+private statsCharts: { [key: string]: Chart } = {}; // Add this for statistics charts
+
+// Modify getStatisticsHistory to create stats charts
+public getStatisticsHistory(time = null): void {
+    if (time == null) {
+        localStorage.setItem('STATS_HISTORY_TIME_FILTER', STATS_HISTORY_TIME_FILTER);
+    } else {
+        localStorage.setItem('STATS_HISTORY_TIME_FILTER', time);
+    }
+    this.optedTime = localStorage.getItem('STATS_HISTORY_TIME_FILTER');
+    this.statisticsService.getStatisticsHistory(this.optedTime, null, null)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((data: any[]) => {
+            // Clear existing stats charts
+            Object.values(this.statsCharts).forEach(chart => chart.destroy());
+            this.statsCharts = {};
+
+            this.graphsToShow.forEach(graph => {
+                const labels = [];
+                const record = map(data['statistics'], graph.key).reverse();
+                let history_ts = map(data['statistics'], 'history_ts');
+                history_ts = history_ts.reverse();
+                history_ts.forEach(ts => {
+                    ts = this.dateFormatter.transform(ts, 'HH:mm:ss');
+                    labels.push(ts);
+                });
+                
+                const canvasId = 'stats-chart-' + graph.key;
+                const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+                if (canvas) {
+                    canvas.width = 1200;
+                    canvas.height = 400;
+                    
+                    const config: ChartConfiguration<'line'> = {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: graph.key,
+                                data: record,
+                                backgroundColor: graph.color,
+                                borderColor: graph.color,
+                                fill: false,
+                                lineTension: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: { 
+                                y: { beginAtZero: true } 
+                            }
+                        }
+                    };
+                    
+                    this.statsCharts[graph.key] = new Chart(canvas, config);
+                }
+            });
+        }, error => this.handleError(error));
+}
+
+// Update clearCharts to clear all types of charts
+clearCharts(): void {
+    // Clear the fetch interval
+    if (this.fetchInterval) {
+        clearInterval(this.fetchInterval);
+        this.fetchInterval = null;
+    }
+
+    // Destroy reading charts
+    Object.values(this.readingCharts).forEach(chart => {
+        if (chart && typeof chart.destroy === 'function') {
+            chart.destroy();
+        }
+    });
+    this.readingCharts = {};
+
+    // Destroy measurement charts
+    Object.values(this.measurementCharts).forEach(chart => {
+        if (chart && typeof chart.destroy === 'function') {
+            chart.destroy();
+        }
+    });
+    this.measurementCharts = {};
+    
+    // Destroy stats charts
+    Object.values(this.statsCharts).forEach(chart => {
+        if (chart && typeof chart.destroy === 'function') {
+            chart.destroy();
+        }
+    });
+    this.statsCharts = {};
+}
+
+// Update ngOnDestroy
+public ngOnDestroy(): void {
+    this.isAlive = false;
+    this.destroy$.next(true);
+    this.destroy$.unsubscribe();
+    this.clearCharts();
+}

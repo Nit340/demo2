@@ -58,13 +58,42 @@
                       </span>
                     </a>
                   </td>
-                  <td>
-                    <a (click)="getAssetReadings(asset.assetCode, asset.count)" class="is-pulled-right">
-                      <span class="icon is-small tooltip has-tooltip-right has-tooltip-arrow" data-tooltip="Export readings">
-                        <i class="fa fa-sm fa-download" aria-hidden="true"></i>
-                      </span>
-                    </a>
-                  </td>
+              <td>
+  <div class="dropdown" [class.is-active]="showDateFilter === asset.assetCode">
+    <div class="dropdown-trigger">
+      <a (click)="toggleDateFilter(asset.assetCode)" class="is-pulled-right">
+        <span class="icon is-small tooltip has-tooltip-right has-tooltip-arrow" data-tooltip="Export readings">
+          <i class="fa fa-sm fa-download" aria-hidden="true"></i>
+        </span>
+      </a>
+    </div>
+    <div class="dropdown-menu" id="dropdown-menu" role="menu">
+      <div class="dropdown-content">
+        <div class="dropdown-item">
+          <p><strong>Select Date Range</strong></p>
+          <div class="field">
+            <label class="label">From</label>
+            <input type="date" class="input" [(ngModel)]="tempStartDate">
+          </div>
+          <div class="field">
+            <label class="label">To</label>
+            <input type="date" class="input" [(ngModel)]="tempEndDate">
+          </div>
+          <div class="field is-grouped">
+            <button class="button is-primary is-small" 
+                    (click)="exportWithDateFilter(asset.assetCode, asset.count)">
+              Export
+            </button>
+            <button class="button is-small" 
+                    (click)="showDateFilter = null">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</td>
                   <td
                     *ngIf="developerFeaturesService.getDeveloperFeatureControl() && rolesService.hasEditPermissions()">
                     <a (click)="setAsset(asset);openModal('purge-asset-dialog')" class="is-pulled-right">
