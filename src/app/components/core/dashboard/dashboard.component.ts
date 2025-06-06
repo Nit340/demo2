@@ -392,10 +392,25 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
     canvas.width = 1200;
     canvas.height = 700;
 
-    // Color generation function
+    // Color generation functions
     const getColor = (index: number, total: number, alpha = 1) => {
         const hue = (index * 360 / total) % 360;
         return `hsla(${hue}, 70%, 50%, ${alpha})`;
+    };
+
+    // Measurement-specific colors (temperature=red, humidity=blue, etc.)
+    const getMeasurementColor = (type: string, alpha = 1): string => {
+        const colorMap: {[key: string]: string} = {
+            'temperature': 'hsla(0, 70%, 50%, ALPHA)',
+            'humidity': 'hsla(240, 70%, 50%, ALPHA)',
+            'pressure': 'hsla(120, 70%, 50%, ALPHA)',
+            'co2': 'hsla(180, 70%, 50%, ALPHA)',
+            'voltage': 'hsla(300, 70%, 50%, ALPHA)',
+            'current': 'hsla(60, 70%, 50%, ALPHA)'
+        };
+        
+        const baseColor = colorMap[type.toLowerCase()] || `hsla(${Math.floor(Math.random() * 360)}, 70%, 50%, ALPHA)`;
+        return baseColor.replace('ALPHA', alpha.toString());
     };
 
     // Timezone helpers
@@ -538,12 +553,12 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
         return;
     }
 
-    // Numerical data - line chart
+    // Numerical data - line chart with measurement-specific color
     const dataset = {
         label: this.selectedDate,
         data: filteredReadings.map(r => r.reading[measurementType]),
-        borderColor: getColor(0, 1),
-        backgroundColor: getColor(0, 1, 0.2),
+        borderColor: getMeasurementColor(measurementType, 1),  // Solid color
+        backgroundColor: getMeasurementColor(measurementType, 0.2),  // Transparent version
         borderWidth: 2,
         tension: 0.1,
         pointRadius: 0,
@@ -650,6 +665,7 @@ createChartForMeasurement(canvasId: string, measurementType: string): void {
     }
     this.measurementCharts[measurementType] = new Chart(canvas, config);
 }
+
 private showNoDataMessage(canvas: HTMLCanvasElement, measurementType: string, date: string): void {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
