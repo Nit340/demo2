@@ -3,22 +3,21 @@
   <div class="controls-section">
     <!-- Left Controls Group -->
     <div class="controls-left">
-      <div class="dropdown time-dropdown">
-        <button class="dropdown-button" (click)="toggleDropDown('time-dropdown')">
-          <span>{{optedTime}} minutes</span>
-          <i class="fas fa-angle-down"></i>
-        </button>
-        <div class="dropdown-content" *ngIf="dropdownOpen['time-dropdown']">
-          <a (click)="setTimeInterval(10)">10 minutes</a>
-          <a (click)="setTimeInterval(30)">30 minutes</a>
-          <a (click)="setTimeInterval(60)">60 minutes</a>
-          <a (click)="setTimeInterval(120)">2 hours</a>
-          <a (click)="setTimeInterval(360)">6 hours</a>
-          <a (click)="setTimeInterval(720)">12 hours</a>
-          <a (click)="setTimeInterval(1440)">24 hours</a>
-        </div>
-      </div>
-
+<div class="dropdown time-dropdown">
+  <button class="dropdown-button" (click)="toggleDropDown('time-dropdown')">
+    <span>{{ convertMinutesToDisplay(optedTime) }}</span>
+    <i class="fas fa-angle-down"></i>
+  </button>
+  <div class="dropdown-content" *ngIf="dropdownOpen['time-dropdown']">
+    <a (click)="setTimeInterval(10)">10 minutes</a>
+    <a (click)="setTimeInterval(30)">30 minutes</a>
+    <a (click)="setTimeInterval(60)">1 hour</a>
+    <a (click)="setTimeInterval(120)">2 hours</a>
+    <a (click)="setTimeInterval(360)">6 hours</a>
+    <a (click)="setTimeInterval(720)">12 hours</a>
+    <a (click)="setTimeInterval(1440)">24 hours</a>
+  </div>
+</div>
       <div class="dropdown graph-dropdown">
         <button class="dropdown-button" (click)="toggleDropDown('graph-key-dropdown')">
           <span>Select Graphs</span>

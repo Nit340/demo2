@@ -98,6 +98,8 @@ onDateChange(): void {
     if (optedGraphStorage != null && typeof (optedGraphStorage[0]) !== 'object') {
       localStorage.removeItem('OPTED_GRAPHS');
     }
+     const storedTime = localStorage.getItem('STATS_HISTORY_TIME_FILTER');
+  this.optedTime = storedTime ? parseInt(storedTime, 10) : 60;
     
     this.getStatistics();
     interval(this.refreshInterval)
@@ -110,14 +112,30 @@ onDateChange(): void {
     this.dropdownOpen[dropdownId] = !this.dropdownOpen[dropdownId];
   }
 
-  // Set time interval
-  setTimeInterval(minutes: number): void {
-    this.optedTime = minutes;
-    this.dropdownOpen['time-dropdown'] = false;
-    localStorage.setItem('STATS_HISTORY_TIME_FILTER', minutes.toString());
-    this.getStatisticsHistory(minutes.toString());
+ // Add this method to your component
+convertMinutesToDisplay(minutes: number | string): string {
+  // Ensure minutes is a number
+  const mins = typeof minutes === 'string' ? parseInt(minutes, 10) : minutes;
+
+  switch (mins) {
+    case 10: return '10 minutes';
+    case 30: return '30 minutes';
+    case 60: return '1 hour';
+    case 120: return '2 hours';
+    case 360: return '6 hours';
+    case 720: return '12 hours';
+    case 1440: return '24 hours';
+    default: return mins + ' minutes';
   }
-  
+}
+
+// Modify your setTimeInterval method to ensure optedTime is a number
+setTimeInterval(minutes: number): void {
+  this.optedTime = minutes; // Store as number
+  this.dropdownOpen['time-dropdown'] = false;
+  localStorage.setItem('STATS_HISTORY_TIME_FILTER', minutes.toString());
+  this.getStatisticsHistory(minutes.toString());
+}
 
   // Graph selection methods
   isGraphSelected(key: string): boolean {
@@ -238,32 +256,62 @@ onDateChange(): void {
       }, error => this.handleError(error));
   }
 
-  public getStatisticsHistory(time = null): void {
-    if (time == null) {
-      localStorage.setItem('STATS_HISTORY_TIME_FILTER', STATS_HISTORY_TIME_FILTER);
-    } else {
-      localStorage.setItem('STATS_HISTORY_TIME_FILTER', time);
-    }
-    this.optedTime = localStorage.getItem('STATS_HISTORY_TIME_FILTER');
-    this.statisticsService.getStatisticsHistory(this.optedTime, null, null)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((data: any[]) => {
-        this.graphsToShow.forEach(graph => {
-          const labels = [];
-          const record = map(data['statistics'], graph.key).reverse();
-          let history_ts = map(data['statistics'], 'history_ts');
-          history_ts = history_ts.reverse();
-          history_ts.forEach(ts => {
-            ts = this.dateFormatter.transform(ts, 'HH:mm:ss');
-            labels.push(ts);
-          });
-          graph.chartValue = this.getChartValues(labels, record, graph.color);
-          graph.chartType = 'line';
-          graph.limit = this.DEFAULT_LIMIT;
-        });
-      }, error => this.handleError(error));
+ public getStatisticsHistory(time: string | number = null): void {
+  // 1. Handle time parameter and localStorage
+  if (time == null) {
+    // If no time provided, use default from constants or localStorage
+    const storedTime = localStorage.getItem('STATS_HISTORY_TIME_FILTER');
+    time = storedTime || STATS_HISTORY_TIME_FILTER;
   }
 
+  // Convert to string for storage and number for component
+  const timeString = time.toString();
+  const timeNumber = parseInt(timeString, 10);
+
+  // Store in localStorage and component
+  localStorage.setItem('STATS_HISTORY_TIME_FILTER', timeString);
+  this.optedTime = timeNumber;
+
+  // 2. Make the API call
+  this.statisticsService.getStatisticsHistory(timeString, null, null)
+    .pipe(takeUntil(this.destroy$))
+    .subscribe(
+      (data: any) => {
+        if (!data || !data.statistics) {
+          this.handleError({ statusText: 'Invalid statistics data received' });
+          return;
+        }
+
+        // 3. Process the data for each graph
+        this.graphsToShow.forEach(graph => {
+          try {
+            // Extract and reverse the data
+            const record = map(data.statistics, graph.key).reverse();
+            let history_ts = map(data.statistics, 'history_ts').reverse();
+
+            // Prepare labels with formatted timestamps
+            const labels = history_ts.map(ts => 
+              this.dateFormatter.transform(ts, 'HH:mm:ss')
+            );
+
+            // Update the graph data
+            graph.chartValue = this.getChartValues(
+              labels,
+              record,
+              graph.color
+            );
+            graph.chartType = 'line';
+            graph.limit = this.DEFAULT_LIMIT;
+          } catch (error) {
+            console.error(`Error processing graph ${graph.key}:`, error);
+          }
+        });
+      },
+      (error) => {
+        this.handleError(error);
+      }
+    );
+}
   public refreshStatisticsHistory(): void {
     this.statisticsService.getStatisticsHistory(this.optedTime)
       .pipe(takeUntil(this.destroy$))
